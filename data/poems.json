@@ -1,0 +1,38 @@
+[
+  {
+    "id": "poem-01",
+    "title": "Il-Mergħa",
+    "author": "Placeholder",
+    "narrator": "Placeholder",
+    "text_mt": "Fuq l-għoljiet tal-ġebel\nfejn ir-riħ jitkellem bil-mod,\nil-merħla timxi bħal xmara—\nwieħed jaqbad, wieħed jibqa' lura.\n\nIr-ragħaj jaf il-qalb tal-art,\nkull ħaġra, kull xewka, kull triq.\nFil-kwiet ta' filgħodu kmieni,\nhija u l-klieb—familja waħda.",
+    "text_en": "On the hills of stone\nwhere the wind speaks softly,\nthe flock moves like a river—\none follows, one lingers.\n\nThe shepherd knows the heart of the land,\nevery stone, every thorn, every path.\nIn the quiet of early morning,\nhe and the dogs — one family.",
+    "audio": null
+  },
+  {
+    "id": "poem-02",
+    "title": "Il-Ħitan",
+    "author": "Placeholder",
+    "narrator": "Placeholder",
+    "text_mt": "Il-ħitan tas-sejjieħ ma jgħidux xejn,\niżda jżommu kollox f'postu.\nBnew bihom in-nannin tagħna—\nbl-idejn, bil-għaraq, bis-sabar.\n\nAħna wkoll bħalhom:\nnibnu, inħarsu, inħobbu.",
+    "text_en": "The dry-stone walls say nothing,\nbut they hold everything in place.\nOur grandparents built them—\nwith hands, with sweat, with patience.\n\nWe too are like them:\nwe build, we guard, we love.",
+    "audio": null
+  },
+  {
+    "id": "poem-03",
+    "title": "Filgħaxija",
+    "author": "Placeholder",
+    "narrator": "Placeholder",
+    "text_mt": "Meta x-xemx tinżel wara l-baħar\nu d-dell jitwal fuq il-blat,\nil-merħla tieqaf weħidha—\nbħallikieku taf li wasal il-mistrieħ.\n\nIl-kelb jinxteħet fil-ħaxix,\nir-ragħaj jibqa' bilwieqfa,\nhares lejn id-dawl tal-aħħar\nqabel id-dlam jibla' kollox.",
+    "text_en": "When the sun sets behind the sea\nand shadows stretch across the rock,\nthe flock stops on its own—\nas if it knows that rest has come.\n\nThe dog lies in the grass,\nthe shepherd stands still,\nwatching the last light\nbefore the dark swallows everything.",
+    "audio": null
+  },
+  {
+    "id": "poem-04",
+    "title": "Il-Ħaruf",
+    "author": "Placeholder",
+    "narrator": "Placeholder",
+    "text_mt": "Insibu l-ħaruf waħdu fil-wied,\nqiegħed jibki, ċkejken u mitluf.\nIl-kelb jdur bih bil-għaqal,\nir-ragħaj jerfgħu f'idejh.\n\nIl-merħla tilqa'h lura—\nmingħajr kliem, mingħajr storbju.\nHekk hi n-natura: taf tħobb\nqabel ma taf titkellem.",
+    "text_en": "We find the lamb alone in the valley,\ncrying, small and lost.\nThe dog circles it gently,\nthe shepherd lifts it in his hands.\n\nThe flock welcomes it back—\nwithout words, without fuss.\nThis is nature: it knows how to love\nbefore it knows how to speak.",
+    "audio": null
+  }
+]

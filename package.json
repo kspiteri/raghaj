@@ -1,0 +1,21 @@
+{
+  "name": "raghaj",
+  "version": "1.0.0",
+  "description": "A relaxed Maltese pastoral herding simulator",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["game", "phaser", "malta", "herding"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^8.0.3"
+  }
+}
