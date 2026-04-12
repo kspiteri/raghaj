@@ -23,6 +23,9 @@ import {
     DOG_STOP_MAX_MS,
     MUR_SHEPHERD_RADIUS,
     TREAT_TRUST_BONUS,
+    EJJA_DURATION_MIN_MS,
+    EJJA_DURATION_MAX_MS,
+    IEQAF_DURATION_MIN_MS,
 } from '../../config/constants';
 import { SheepData } from '../Sheep/Sheep';
 import { isoProject } from '../../utils/iso';
@@ -40,11 +43,18 @@ export default class Dog extends BaseEntity {
 
     // Trust
     trust: number = DOG_TRUST_INITIAL;
-    private praiseTimer    = 0;   // cooldown remaining (ms)
-    private praiseCombo    = 0;   // rapid presses counted so far
-    private praiseWindow   = 0;   // window remaining to add more presses (ms)
+    private praiseTimer    = 0;
+    private praiseCombo    = 0;
+    private praiseWindow   = 0;
     private stopTimer      = 0;
+    private stopMaxMs      = DOG_STOP_MAX_MS;  // set per-command based on trust
     private idleDecayTimer = 0;
+
+    // Ejja session
+    private ejjaActive     = false;
+    private ejjaTimer      = 0;
+    private ejjaTotalMs    = 0;   // initial duration — used to compute progress fraction
+    private ejjaStrayTimer = 0;   // ms remaining on a stray-detour target
 
     constructor(scene: Phaser.Scene, x: number, y: number, isSea: (wx: number, wy: number) => boolean) {
         super(scene, x, y);
@@ -63,6 +73,12 @@ export default class Dog extends BaseEntity {
     // ── Trust API ────────────────────────────────────────────────────────────
 
     getTrust(): number { return this.trust; }
+
+    /** Returns 0–1 fraction of ejja time remaining, or null when not active. */
+    getEjjaProgress(): number | null {
+        if (!this.ejjaActive || this.ejjaTotalMs <= 0) return null;
+        return Math.max(0, this.ejjaTimer / this.ejjaTotalMs);
+    }
 
     addTrust(amount: number): void {
         this.trust = Phaser.Math.Clamp(this.trust + amount, 0, 100);
@@ -98,7 +114,7 @@ export default class Dog extends BaseEntity {
     showHeartEffect(text: string): void {
         const iso = isoProject(this.x, this.y);
         const label = this.scene.add.text(iso.x, iso.y - 60, text, {
-            fontSize: '18px',
+            fontSize: '18px', fontFamily: "'Lora', Georgia, serif",
         }).setOrigin(0.5, 1).setDepth(99999);
 
         this.scene.tweens.add({
@@ -127,22 +143,38 @@ export default class Dog extends BaseEntity {
             return;
         }
 
+        if (command === 'AGHTI') return; // treat giving handled in UIScene
+
         this.state = nextDogState(this.state, command);
         this.autonomousTimer = 0;
         this.stopTimer = 0;
 
         switch (command) {
             case 'MUR':
-                this.targetX = this.x;
-                this.targetY = this.y;
+                this.targetX    = this.x;
+                this.targetY    = this.y;
+                this.ejjaActive     = false;
+                this.ejjaTimer      = 0;
+                this.ejjaStrayTimer = 0;
                 break;
             case 'EJJA':
-                this.targetX = shepherdX;
-                this.targetY = shepherdY;
+                this.targetX    = shepherdX;
+                this.targetY    = shepherdY;
+                this.ejjaActive = true;
+                this.ejjaTimer  = Phaser.Math.Linear(
+                    EJJA_DURATION_MIN_MS, EJJA_DURATION_MAX_MS, this.trust / 100,
+                );
+                this.ejjaTotalMs    = this.ejjaTimer;
+                this.ejjaStrayTimer = 0;
                 break;
             case 'IEQAF':
-                this.targetX = this.x;
-                this.targetY = this.y;
+                this.targetX  = this.x;
+                this.targetY  = this.y;
+                this.ejjaActive = false;
+                this.ejjaTimer  = 0;
+                this.stopMaxMs  = Phaser.Math.Linear(
+                    IEQAF_DURATION_MIN_MS, DOG_STOP_MAX_MS, this.trust / 100,
+                );
                 break;
         }
     }
@@ -150,8 +182,8 @@ export default class Dog extends BaseEntity {
     // ── Autonomous tickers ───────────────────────────────────────────────────
 
     tickAutonomous(sheep: SheepData[], shepherdX: number, shepherdY: number, delta: number): void {
-        if (this.state === DogState.IDLE)    this.tickMUR(sheep, shepherdX, shepherdY, delta);
-        if (this.state === DogState.HERDING) this.tickEJJA(sheep, shepherdX, shepherdY, delta);
+        if (this.ejjaActive)              this.tickEJJA(sheep, shepherdX, shepherdY, delta);
+        else if (this.state === DogState.IDLE) this.tickMUR(sheep, shepherdX, shepherdY, delta);
     }
 
     /** Free mode — nudge stray sheep within MUR_SHEPHERD_RADIUS of shepherd. */
@@ -187,43 +219,50 @@ export default class Dog extends BaseEntity {
         this.state = DogState.HERDING;
     }
 
-    /** Follow mode — target farthest stray first; else position between shepherd and flock. */
+    /** Follow mode — continuously follows shepherd; periodically detours to push strays. */
     private tickEJJA(sheep: SheepData[], shepherdX: number, shepherdY: number, delta: number): void {
+        // Hold a stray-detour target until its timer expires
+        if (this.ejjaStrayTimer > 0) {
+            this.ejjaStrayTimer -= delta;
+            return;
+        }
+
+        // Periodic stray check
         this.autonomousTimer += delta;
         const interval = this.trust >= TRUST_HIGH_THRESHOLD
             ? DOG_AUTONOMOUS_INTERVAL * TRUST_HIGH_SPEED_FACTOR
             : DOG_AUTONOMOUS_INTERVAL;
-        if (this.autonomousTimer < interval) return;
-        this.autonomousTimer = 0;
+        if (this.autonomousTimer >= interval) {
+            this.autonomousTimer = 0;
 
-        if (sheep.length === 0) return;
+            let farthestStray: SheepData | null = null;
+            let maxStrayDist = 0;
+            for (const s of sheep) {
+                if (!s.isStray) continue;
+                const d = Math.hypot(s.x - shepherdX, s.y - shepherdY);
+                if (d > maxStrayDist) { maxStrayDist = d; farthestStray = s; }
+            }
 
-        // Prefer targeting stray sheep
-        let farthestStray: SheepData | null = null;
-        let maxStrayDist = 0;
-        for (const s of sheep) {
-            if (!s.isStray) continue;
-            const d = Math.hypot(s.x - shepherdX, s.y - shepherdY);
-            if (d > maxStrayDist) { maxStrayDist = d; farthestStray = s; }
+            if (farthestStray) {
+                const dx = shepherdX - farthestStray.x;
+                const dy = shepherdY - farthestStray.y;
+                const dist = Math.hypot(dx, dy);
+                this.targetX = farthestStray.x - (dx / dist) * (DOG_REPULSION_RADIUS * 0.6);
+                this.targetY = farthestStray.y - (dy / dist) * (DOG_REPULSION_RADIUS * 0.6);
+                this.ejjaStrayTimer = 4_000;
+                this.state = DogState.HERDING;
+                return;
+            }
         }
 
-        if (farthestStray) {
-            const dx = shepherdX - farthestStray.x;
-            const dy = shepherdY - farthestStray.y;
-            const dist = Math.hypot(dx, dy);
-            this.targetX = farthestStray.x - (dx / dist) * (DOG_REPULSION_RADIUS * 0.6);
-            this.targetY = farthestStray.y - (dy / dist) * (DOG_REPULSION_RADIUS * 0.6);
-            return;
-        }
-
-        // No strays — position between shepherd and flock centroid
-        let cx = 0, cy = 0;
-        for (const s of sheep) { cx += s.x; cy += s.y; }
-        cx /= sheep.length;
-        cy /= sheep.length;
-
-        this.targetX = (shepherdX + cx) / 2;
-        this.targetY = (shepherdY + cy) / 2;
+        // Default: follow shepherd, staying behind them
+        const toBehindX = this.x - shepherdX;
+        const toBehindY = this.y - shepherdY;
+        const toBehindDist = Math.hypot(toBehindX, toBehindY) || 1;
+        const FOLLOW_OFFSET = 90; // px — how far behind the shepherd the dog trails
+        this.targetX = shepherdX + (toBehindX / toBehindDist) * FOLLOW_OFFSET;
+        this.targetY = shepherdY + (toBehindY / toBehindDist) * FOLLOW_OFFSET;
+        this.state   = DogState.HERDING;
     }
 
     // ── Repulsion ────────────────────────────────────────────────────────────
@@ -260,13 +299,22 @@ export default class Dog extends BaseEntity {
             this.idleDecayTimer = DOG_IDLE_DECAY_INTERVAL_MS;
         }
 
+        // Ejja session timer
+        if (this.ejjaActive) {
+            this.ejjaTimer -= delta;
+            if (this.ejjaTimer <= 0) {
+                this.ejjaActive = false;
+                if (this.state === DogState.HERDING) this.state = DogState.IDLE;
+            }
+        }
+
         // STOPPED state logic
         if (this.state === DogState.STOPPED) {
             this.stopTimer += delta;
             if (this.stopTimer > DOG_STOP_DECAY_START_MS) {
                 this.addTrust(-DOG_STOP_DECAY_RATE * dt);
             }
-            if (this.stopTimer >= DOG_STOP_MAX_MS) {
+            if (this.stopTimer >= this.stopMaxMs) {
                 this.state = DogState.IDLE;
                 this.stopTimer = 0;
             }
@@ -289,8 +337,9 @@ export default class Dog extends BaseEntity {
         const dy = this.targetY - this.y;
         const dist = Math.hypot(dx, dy);
 
-        if (dist < 6) {
-            this.state = DogState.IDLE;
+        if (dist < (this.ejjaActive ? 12 : 6)) {
+            // During ejja, stay near shepherd rather than going idle
+            if (!this.ejjaActive) this.state = DogState.IDLE;
             this.sprite.play('dog-idle', true);
             return;
         }

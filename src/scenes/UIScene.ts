@@ -6,11 +6,14 @@ import { Poem } from '../systems/PoetrySystem';
 import {
     POETRY_FADE_DURATION, JOYSTICK_RADIUS, JOYSTICK_DEAD_ZONE,
     GUIDE_COOLDOWN_MS, ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
-    SHEPHERD_WALK_SPEED, SHEPHERD_RUN_SPEED,
+    SHEPHERD_WALK_SPEED, SHEPHERD_RUN_SPEED, TREAT_GIVE_RADIUS,
 } from '../config/constants';
 import { isoJoystickTransform } from '../utils/iso';
 
 type ControlMode = 'keyboard' | 'touch';
+
+const FONT         = "'Lora', Georgia, serif";
+const FONT_DISPLAY = "'Cinzel', Georgia, serif";
 
 // Keyboard shortcut labels matching COMMANDS order
 const CMD_KEYS = ['1', '2', '3', '4'];
@@ -42,10 +45,17 @@ export default class UIScene extends Phaser.Scene {
     private guidePill!:   Phaser.GameObjects.Rectangle;
     private guideFill!:   Phaser.GameObjects.Rectangle;
     private guideLabel!:  Phaser.GameObjects.Text;
+    private guideTooltip: Phaser.GameObjects.Container | null = null;
 
     // Command row (recreated on layout)
     private cmdRow!: Phaser.GameObjects.Rectangle;
     private cmdButtons: Phaser.GameObjects.Rectangle[] = [];
+    private cmdRowItems: Phaser.GameObjects.GameObject[] = [];
+    private cmdTooltip:    Phaser.GameObjects.Container | null = null;
+    private treatBtn:      Phaser.GameObjects.Rectangle | null = null;
+    private treatBtnLabel: Phaser.GameObjects.Text | null      = null;
+    private ejjaFill:      Phaser.GameObjects.Rectangle | null = null;
+    private ejjaFillMaxW   = 0;
 
     // Joystick
     private joystickBase!:  Phaser.GameObjects.Arc;
@@ -161,6 +171,23 @@ export default class UIScene extends Phaser.Scene {
         // Live HUD text
         this.treatText?.setText(`🍖 ${this.shepherd.treatCount}`);
         this.trustText?.setText(`❤️ ${Math.round(this.dog.getTrust())}`);
+
+        // Ejja timer bar
+        if (this.ejjaFill) {
+            const progress = this.dog.getEjjaProgress();
+            if (progress !== null) {
+                this.ejjaFill.setVisible(true).setSize(Math.max(1, progress * this.ejjaFillMaxW), this.ejjaFill.height);
+            } else {
+                this.ejjaFill.setVisible(false);
+            }
+        }
+        if (this.treatBtn && this.treatBtnLabel) {
+            const canGive = this.shepherd.treatCount > 0 &&
+                Math.hypot(this.shepherd.x - this.dog.x, this.shepherd.y - this.dog.y) < TREAT_GIVE_RADIUS;
+            const a = canGive ? 1 : 0.3;
+            this.treatBtn.setAlpha(a);
+            this.treatBtnLabel.setAlpha(a);
+        }
     }
 
     // ── Keyboard ─────────────────────────────────────────────────────────────
@@ -344,6 +371,8 @@ export default class UIScene extends Phaser.Scene {
         this.guidePill?.destroy();
         this.guideFill?.destroy();
         this.guideLabel?.destroy();
+        this.guideTooltip?.destroy();
+        this.guideTooltip = null;
         this.mapToggleBtn?.destroy();
 
         const y = height - HUD_H;
@@ -367,12 +396,12 @@ export default class UIScene extends Phaser.Scene {
         x += 30;
 
         // Treats
-        this.treatText = this.add.text(x, cy, '🍖 0', { fontSize: '12px', color: '#f5e6c8' })
+        this.treatText = this.add.text(x, cy, '🍖 0', { fontSize: '12px', color: '#f5e6c8', fontFamily: FONT })
             .setOrigin(0, 0.5).setDepth(200);
         x += 56;
 
         // Trust
-        this.trustText = this.add.text(x, cy, '❤️ 30', { fontSize: '12px', color: '#f5e6c8' })
+        this.trustText = this.add.text(x, cy, '❤️ 30', { fontSize: '12px', color: '#f5e6c8', fontFamily: FONT })
             .setOrigin(0, 0.5).setDepth(200);
         x += 60;
 
@@ -381,19 +410,37 @@ export default class UIScene extends Phaser.Scene {
             .setOrigin(0, 0.5).setDepth(200).setInteractive({ useHandCursor: true });
         this.mapToggleBtn.on('pointerdown', () => this.toggleMinimap());
 
-        // Gwida pill (right side)
+        // Mexxi pill (right side)
         const pillW = 90;
         const pillX = width - pillW / 2 - 10;
+
+        const guideTooltipText = this.add.text(0, 0, '', {
+            fontSize: '11px', color: '#f5e6c8', fontFamily: FONT, align: 'center',
+        }).setOrigin(0.5);
+        const guideTooltipBg = this.add.rectangle(0, 0, 10, 10, 0x1a0f05, 0.92).setOrigin(0.5);
+        this.guideTooltip = this.add.container(0, 0, [guideTooltipBg, guideTooltipText])
+            .setDepth(210).setVisible(false);
+
         this.guidePill = this.add.rectangle(pillX, cy, pillW, STATUS_BAR_H - 10, 0x1a6060, 0.88)
             .setDepth(200).setInteractive({ useHandCursor: true });
-        this.guidePill.on('pointerdown', () => this.shepherd.activateGuide());
+        this.guidePill.on('pointerover', () => {
+            guideTooltipText.setText('Nearby sheep follow\nyou for 8 seconds');
+            const padX = 14, padY = 8;
+            guideTooltipBg.setSize(guideTooltipText.width + padX * 2, guideTooltipText.height + padY * 2);
+            this.guideTooltip!.setPosition(pillX, cy - STATUS_BAR_H / 2 - guideTooltipBg.height / 2 - 4).setVisible(true);
+        });
+        this.guidePill.on('pointerout',  () => this.guideTooltip!.setVisible(false));
+        this.guidePill.on('pointerdown', () => {
+            this.shepherd.activateGuide();
+            this.guideTooltip!.setVisible(false);
+        });
 
         this.guideFill = this.add.rectangle(pillX - pillW / 2, cy, pillW, STATUS_BAR_H - 10, 0x40d0d0, 0.35)
             .setOrigin(0, 0.5).setDepth(201);
 
         const kbHint = this.controlMode === 'keyboard' ? ' [G]' : '';
-        this.guideLabel = this.add.text(pillX, cy, `Gwida${kbHint}`, {
-            fontSize: '11px', color: '#a0f0f0', fontStyle: 'bold',
+        this.guideLabel = this.add.text(pillX, cy, `Mexxi${kbHint}`, {
+            fontSize: '11px', color: '#a0f0f0', fontStyle: 'bold', fontFamily: FONT_DISPLAY,
         }).setOrigin(0.5, 0.5).setDepth(202);
     }
 
@@ -402,7 +449,14 @@ export default class UIScene extends Phaser.Scene {
     private buildCommandRow(width: number, height: number): void {
         this.cmdRow?.destroy();
         this.cmdButtons.forEach(b => b.destroy());
-        this.cmdButtons = [];
+        this.cmdRowItems.forEach(o => (o as Phaser.GameObjects.GameObject).destroy());
+        this.cmdTooltip?.destroy();
+        this.cmdButtons  = [];
+        this.cmdRowItems = [];
+        this.treatBtn      = null;
+        this.treatBtnLabel = null;
+        this.ejjaFill      = null;
+        this.ejjaFillMaxW  = 0;
 
         const rowY = height - CMD_ROW_H;
         const btnW = width / COMMANDS.length;
@@ -410,43 +464,100 @@ export default class UIScene extends Phaser.Scene {
         this.cmdRow = this.add.rectangle(width / 2, height - CMD_ROW_H / 2, width, CMD_ROW_H, 0x120c04, 0.90)
             .setDepth(199);
 
+        // Shared tooltip — one instance repositioned on hover
+        const tooltipText = this.add.text(0, 0, '', {
+            fontSize: '11px', color: '#f5e6c8', fontFamily: FONT, align: 'center',
+        }).setOrigin(0.5);
+        const tooltipBg = this.add.rectangle(0, 0, 10, 10, 0x1a0f05, 0.92).setOrigin(0.5);
+        // bg drawn behind text inside container
+        this.cmdTooltip = this.add.container(0, 0, [tooltipBg, tooltipText])
+            .setDepth(210).setVisible(false);
+
         COMMANDS.forEach((def, i) => {
             const cx  = i * btnW + btnW / 2;
             const cy  = height - CMD_ROW_H / 2;
 
+            const isAghti  = def.command === 'AGHTI';
             const isBravu  = def.command === 'BRAVU';
-            const baseFill = isBravu ? 0x3d2010 : 0x1e1408;
-            const hitFill  = isBravu ? 0x8a4020 : 0x4a3020;
+            const baseFill = isBravu ? 0x3d2010 : isAghti ? 0x1e3020 : 0x1e1408;
+            const hitFill  = isBravu ? 0x8a4020 : isAghti ? 0x3a7040 : 0x4a3020;
 
             const btn = this.add.rectangle(cx, cy, btnW - 2, CMD_ROW_H - 2, baseFill, 0.0)
                 .setDepth(200).setInteractive({ useHandCursor: true });
             this.cmdButtons.push(btn);
 
             if (i > 0) {
-                this.add.rectangle(i * btnW, cy, 1, CMD_ROW_H - 8, 0x6a5040, 0.4).setDepth(200);
+                this.cmdRowItems.push(
+                    this.add.rectangle(i * btnW, cy, 1, CMD_ROW_H - 8, 0x6a5040, 0.4).setDepth(200),
+                );
             }
 
-            this.add.text(cx, cy - 9, def.label, {
-                fontSize: '13px', color: isBravu ? '#f0c080' : '#f0e0c0', fontStyle: 'bold',
+            const labelColor = isBravu ? '#f0c080' : isAghti ? '#a0f0b0' : '#f0e0c0';
+            const labelText = this.add.text(cx, cy, def.label, {
+                fontSize: '15px', color: labelColor, fontStyle: 'bold',
+                fontFamily: FONT_DISPLAY,
             }).setOrigin(0.5).setDepth(201);
+            this.cmdRowItems.push(labelText);
 
-            this.add.text(cx, cy + 9, def.hint, {
-                fontSize: '9px', color: '#907060',
-            }).setOrigin(0.5).setDepth(201);
+            if (isAghti) {
+                this.treatBtn      = btn;
+                this.treatBtnLabel = labelText;
+            }
+
+            if (def.command === 'EJJA') {
+                const barH = 3;
+                const barW = btnW - 8;
+                this.ejjaFillMaxW = barW;
+                // background track
+                this.cmdRowItems.push(
+                    this.add.rectangle(cx, height - barH / 2 - 1, barW, barH, 0x2a2010, 0.7).setDepth(200),
+                );
+                // fill bar (starts hidden)
+                this.ejjaFill = this.add.rectangle(cx - barW / 2, height - barH / 2 - 1, 0, barH, 0x60c080, 0.85)
+                    .setOrigin(0, 0.5).setDepth(201).setVisible(false);
+                this.cmdRowItems.push(this.ejjaFill);
+            }
 
             if (this.controlMode === 'keyboard' && CMD_KEYS[i]) {
-                this.add.text(cx + btnW / 2 - 6, rowY + 4, `[${CMD_KEYS[i]}]`, {
-                    fontSize: '8px', color: '#604030',
-                }).setOrigin(1, 0).setDepth(201);
+                this.cmdRowItems.push(
+                    this.add.text(cx + btnW / 2 - 6, rowY + 4, `[${CMD_KEYS[i]}]`, {
+                        fontSize: '8px', color: '#907060', fontFamily: FONT_DISPLAY,
+                    }).setOrigin(1, 0).setDepth(201),
+                );
             }
 
-            btn.on('pointerover',  () => btn.setFillStyle(hitFill, 0.6));
-            btn.on('pointerout',   () => btn.setFillStyle(baseFill, 0.0));
-            btn.on('pointerdown',  () => {
-                this.commandSystem.dispatch(def.command);
-                btn.setFillStyle(hitFill, 0.9);
-                this.time.delayedCall(120, () => btn.setFillStyle(baseFill, 0.0));
+            btn.on('pointerover', () => {
+                btn.setFillStyle(hitFill, 0.6);
+                tooltipText.setText(def.description);
+                const padX = 14, padY = 8;
+                tooltipBg.setSize(tooltipText.width + padX * 2, tooltipText.height + padY * 2);
+                this.cmdTooltip!
+                    .setPosition(cx, rowY - tooltipBg.height / 2 - 6)
+                    .setVisible(true);
             });
+            btn.on('pointerout', () => {
+                btn.setFillStyle(baseFill, 0.0);
+                this.cmdTooltip!.setVisible(false);
+            });
+            if (isAghti) {
+                btn.on('pointerdown', () => {
+                    this.cmdTooltip!.setVisible(false);
+                    const dist = Math.hypot(this.shepherd.x - this.dog.x, this.shepherd.y - this.dog.y);
+                    if (this.shepherd.treatCount > 0 && dist < TREAT_GIVE_RADIUS) {
+                        this.shepherd.treatCount--;
+                        this.dog.giveTreat();
+                        btn.setFillStyle(hitFill, 0.9);
+                        this.time.delayedCall(120, () => btn.setFillStyle(baseFill, 0.0));
+                    }
+                });
+            } else {
+                btn.on('pointerdown', () => {
+                    this.commandSystem.dispatch(def.command);
+                    this.cmdTooltip!.setVisible(false);
+                    btn.setFillStyle(hitFill, 0.9);
+                    this.time.delayedCall(120, () => btn.setFillStyle(baseFill, 0.0));
+                });
+            }
         });
     }
 
@@ -473,24 +584,24 @@ export default class UIScene extends Phaser.Scene {
         const bg     = this.add.rectangle(cx, cy, pw, ph, 0x1a0f05, 0.90).setName('bg');
 
         const title = this.add.text(cx, cy - ph / 2 + 20, '', {
-            fontSize: '13px', color: '#c8a96e', fontStyle: 'italic',
+            fontSize: '13px', color: '#c8a96e', fontStyle: 'italic', fontFamily: FONT,
         }).setOrigin(0.5).setName('title');
 
         const body = this.add.text(cx, cy - 10, '', {
-            fontSize: '14px', color: '#f5e6c8',
+            fontSize: '14px', color: '#f5e6c8', fontFamily: FONT,
             wordWrap: { width: pw - 40 }, align: 'center', lineSpacing: 6,
         }).setOrigin(0.5).setName('body');
 
         const author = this.add.text(cx, cy + ph / 2 - 32, '', {
-            fontSize: '11px', color: '#907060',
+            fontSize: '11px', color: '#907060', fontFamily: FONT,
         }).setOrigin(0.5).setName('author');
 
         const toggle = this.add.text(cx, cy + ph / 2 - 14, '[ English ]', {
-            fontSize: '11px', color: '#c8a96e',
+            fontSize: '11px', color: '#c8a96e', fontFamily: FONT,
         }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setName('toggle');
 
         const close = this.add.text(cx + pw / 2 - 14, cy - ph / 2 + 14, '✕', {
-            fontSize: '13px', color: '#907060',
+            fontSize: '13px', color: '#907060', fontFamily: FONT,
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         close.on('pointerdown',  () => this.hidePoem());
@@ -559,7 +670,7 @@ export default class UIScene extends Phaser.Scene {
         this.mapFrame = this.add.graphics();
 
         const clearBtn = this.add.text(0, 0, 'Clear', {
-            fontSize: '11px', color: '#3a2508', fontStyle: 'bold',
+            fontSize: '11px', color: '#3a2508', fontStyle: 'bold', fontFamily: FONT,
             backgroundColor: '#d4b888', padding: { x: 8, y: 3 },
         }).setName('clearBtn').setInteractive({ useHandCursor: true });
         clearBtn.on('pointerdown', () => {
@@ -568,7 +679,7 @@ export default class UIScene extends Phaser.Scene {
         });
 
         const closeBtn = this.add.text(0, 0, '✕ Close', {
-            fontSize: '11px', color: '#3a2508', fontStyle: 'bold',
+            fontSize: '11px', color: '#3a2508', fontStyle: 'bold', fontFamily: FONT,
             backgroundColor: '#d4b888', padding: { x: 8, y: 3 },
         }).setName('closeBtn').setInteractive({ useHandCursor: true });
         closeBtn.on('pointerdown', () => this.toggleMinimap());

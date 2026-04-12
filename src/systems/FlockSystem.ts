@@ -25,6 +25,7 @@ import {
     MOOD_LOW_THRESHOLD,
     MOOD_HIGH_COHESION_BONUS,
     MOOD_LOW_SEP_BONUS,
+    GUIDE_SPREAD_RADIUS,
 } from '../config/constants';
 
 interface WallRect { x: number; y: number; w: number; h: number; }
@@ -50,18 +51,42 @@ export default class FlockSystem {
         for (let i = 0; i < count; i++) {
             const s = sheep[i];
 
-            // ── Guided sheep: follow shepherd directly, skip boids ──────────
+            // ── Guided sheep: spread around shepherd, maintain separation ──────
             if (s.isGuided) {
                 const dx = shepherdX - s.x;
                 const dy = shepherdY - s.y;
-                const dist = Math.hypot(dx, dy) || 1;
-                if (dist > 10) {
-                    const speed = Math.min(SHEEP_FLEE_SPEED * dt, dist);
-                    s.vx = (dx / dist) * speed / dt;
-                    s.vy = (dy / dist) * speed / dt;
-                    s.x += s.vx * dt;
-                    s.y += s.vy * dt;
+                const distToShepherd = Math.hypot(dx, dy) || 1;
+
+                // Separation from all other sheep
+                let sepX = 0, sepY = 0;
+                const sepRadius = BOID_NEIGHBOR_RADIUS;
+                for (let j = 0; j < count; j++) {
+                    if (i === j) continue;
+                    const n = sheep[j];
+                    const ndx = n.x - s.x;
+                    const ndy = n.y - s.y;
+                    const nd = Math.hypot(ndx, ndy);
+                    if (nd < sepRadius && nd > 0) {
+                        sepX -= ndx / nd;
+                        sepY -= ndy / nd;
+                    }
                 }
+
+                // Attract toward shepherd only when outside spread radius
+                const attract = distToShepherd > GUIDE_SPREAD_RADIUS ? 4 : 0;
+                s.vx += (dx / distToShepherd) * attract + sepX * BOID_SEPARATION * 1.5;
+                s.vy += (dy / distToShepherd) * attract + sepY * BOID_SEPARATION * 1.5;
+
+                const spd = Math.hypot(s.vx, s.vy);
+                if (spd > SHEEP_FLEE_SPEED) {
+                    s.vx = (s.vx / spd) * SHEEP_FLEE_SPEED;
+                    s.vy = (s.vy / spd) * SHEEP_FLEE_SPEED;
+                }
+                s.vx *= 0.88;
+                s.vy *= 0.88;
+
+                s.x += s.vx * dt;
+                s.y += s.vy * dt;
                 s.x = Math.max(10, Math.min(s.x, WORLD_WIDTH  - 10));
                 s.y = Math.max(10, Math.min(s.y, WORLD_HEIGHT - 10));
                 continue;

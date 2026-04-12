@@ -1,11 +1,12 @@
 import Dog from '../entities/Dog/Dog';
 import { DogCommand } from '../entities/Dog/types';
 
-export const COMMANDS: { label: string; hint: string; command: DogCommand }[] = [
-    { label: 'Mur',    hint: 'Free',   command: 'MUR'   },
-    { label: 'Ejja',   hint: 'Follow', command: 'EJJA'  },
-    { label: 'Ieqaf',  hint: 'Stop',   command: 'IEQAF' },
-    { label: 'Bravu!', hint: 'Praise', command: 'BRAVU' },
+export const COMMANDS: { label: string; command: DogCommand; description: string }[] = [
+    { label: 'Mur',    command: 'MUR',   description: 'Roam freely, nudge strays back'         },
+    { label: 'Ejja',   command: 'EJJA',  description: 'Follow & herd — duration\nscales with trust' },
+    { label: 'Ieqaf',  command: 'IEQAF', description: 'Hold position — duration\nscales with trust' },
+    { label: 'Bravu!', command: 'BRAVU', description: 'Praise — builds the dog\'s trust'        },
+    { label: 'Agħti',  command: 'AGHTI', description: 'Give the dog a treat'                    },
 ];
 
 export default class CommandSystem {

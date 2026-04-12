@@ -7,6 +7,7 @@ export enum DogState {
 
 export type DogCommand =
     | 'MUR'    // Mur    — free roam, nudge strays within shepherd radius
-    | 'EJJA'   // Ejja   — follow shepherd, actively herd
-    | 'IEQAF'  // Ieqaf  — hold position up to 60s then revert
-    | 'BRAVU'; // Bravu! — praise, no movement change
+    | 'EJJA'   // Ejja   — follow shepherd, actively herd (trust-timed)
+    | 'IEQAF'  // Ieqaf  — hold position (trust-timed, then revert)
+    | 'BRAVU'  // Bravu! — praise, no movement change
+    | 'AGHTI'; // Agħti  — give treat (handled externally, no-op in dog state)

@@ -66,9 +66,10 @@ export const STRAY_TIME_THRESHOLD   = 20;        // seconds on bare ground → s
 export const STRAY_WANDER_MULTIPLIER = 2.5;
 
 // Guide ability
-export const GUIDE_DURATION_MS  = 8_000;
-export const GUIDE_COOLDOWN_MS  = 30_000;
-export const GUIDE_RADIUS       = 300;           // px — sheep within this follow shepherd
+export const GUIDE_DURATION_MS    = 8_000;
+export const GUIDE_COOLDOWN_MS    = 30_000;
+export const GUIDE_RADIUS         = 300;           // px — sheep within this follow shepherd
+export const GUIDE_SPREAD_RADIUS  = 180;           // px — guided sheep orbit shepherd at this distance
 
 // Dog trust
 export const DOG_TRUST_INITIAL         = 30;
@@ -84,11 +85,14 @@ export const TRUST_LOW_IGNORE_CHANCE   = 0.20;   // 20% chance to ignore command
 export const TRUST_HIGH_SPEED_FACTOR   = 0.6;   // multiplier on DOG_AUTONOMOUS_INTERVAL at high trust
 
 // Dog commands
-export const DOG_STOP_MAX_MS       = 60_000;     // IEQAF auto-reverts after 60s
-export const MUR_SHEPHERD_RADIUS   = 400;        // px — MUR mode acts within this of shepherd
+export const DOG_STOP_MAX_MS        = 60_000;     // IEQAF max duration (high trust)
+export const MUR_SHEPHERD_RADIUS    = 400;         // px — MUR mode acts within this of shepherd
+export const EJJA_DURATION_MIN_MS   = 8_000;       // at trust=0
+export const EJJA_DURATION_MAX_MS   = 45_000;      // at trust=100
+export const IEQAF_DURATION_MIN_MS  = 10_000;      // at trust=0 (max = DOG_STOP_MAX_MS)
 
 // Treats
-export const TREAT_SPAWN_COUNT    = 15;
+export const TREAT_SPAWN_COUNT    = 5;
 export const TREAT_COLLECT_RADIUS = 20;          // px — shepherd picks up
 export const TREAT_GIVE_RADIUS    = 30;          // px — shepherd gives to dog
 export const TREAT_MAX_CARRY      = 5;

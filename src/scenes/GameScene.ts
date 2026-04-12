@@ -58,7 +58,7 @@ export default class GameScene extends Phaser.Scene {
         this.dog      = new Dog(this, cx + 60, cy + 40, this.isSea);
         this.flock    = new Flock(this, cx, cy, this.isSeaOrChannel);
 
-        this.treatSystem  = new TreatSystem(this, 15, this.isSea);
+        this.treatSystem  = new TreatSystem(this, 5, this.isSea, this.shepherd);
         this.flockSystem  = new FlockSystem();
 
         this.commandSystem = new CommandSystem(this.dog, () => ({

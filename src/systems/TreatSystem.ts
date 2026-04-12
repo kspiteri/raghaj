@@ -22,16 +22,19 @@ interface TreatData {
 export default class TreatSystem {
     private treats: TreatData[] = [];
     private isSea: (wx: number, wy: number) => boolean;
+    private scene: Phaser.Scene;
 
     constructor(
         scene: Phaser.Scene,
         count: number,
         isSea: (wx: number, wy: number) => boolean,
+        shepherd: Shepherd,
     ) {
         this.isSea = isSea;
+        this.scene = scene;
 
         for (let i = 0; i < count; i++) {
-            const { x, y } = this.randomLandPosition();
+            const { x, y } = this.randomNearPosition(shepherd.x, shepherd.y);
             const iso = isoProject(x, y);
             const sprite = scene.add.text(iso.x, iso.y - 12, '🍖', { fontSize: '16px' })
                 .setOrigin(0.5, 1)
@@ -45,7 +48,7 @@ export default class TreatSystem {
             if (!t.active) {
                 t.respawnTimer -= delta;
                 if (t.respawnTimer <= 0) {
-                    const pos = this.randomLandPosition();
+                    const pos = this.randomNearPosition(shepherd.x, shepherd.y);
                     t.x = pos.x;
                     t.y = pos.y;
                     const iso = isoProject(t.x, t.y);
@@ -86,14 +89,18 @@ export default class TreatSystem {
         }
     }
 
-    private randomLandPosition(): { x: number; y: number } {
+    private randomNearPosition(cx: number, cy: number): { x: number; y: number } {
+        const cam   = this.scene.cameras.main;
+        const halfW = (cam.width  / cam.zoom) * 0.45;
+        const halfH = (cam.height / cam.zoom) * 0.45;
+
         let x: number, y: number;
         let attempts = 0;
         do {
-            x = Math.random() * WORLD_WIDTH;
-            y = Math.random() * WORLD_HEIGHT;
+            x = Phaser.Math.Clamp(cx + (Math.random() * 2 - 1) * halfW, 0, WORLD_WIDTH);
+            y = Phaser.Math.Clamp(cy + (Math.random() * 2 - 1) * halfH, 0, WORLD_HEIGHT);
             attempts++;
-        } while (this.isSea(x, y) && attempts < 100);
+        } while (this.isSea(x, y) && attempts < 20);
         return { x, y };
     }
 

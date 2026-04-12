@@ -6,5 +6,6 @@ export function nextDogState(current: DogState, command: DogCommand): DogState {
         case 'EJJA':  return DogState.HERDING;
         case 'IEQAF': return DogState.STOPPED;
         case 'BRAVU': return current;
+        case 'AGHTI': return current;
     }
 }
