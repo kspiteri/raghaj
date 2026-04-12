@@ -8,7 +8,7 @@ There are no enemies, no timers, no fail states. Just open land, a flock to look
 
 ---
 
-*
+( * some of this stuff might not be implemented yet )
 
 ---
 

@@ -24,7 +24,7 @@ export default class PreloadScene extends Phaser.Scene {
                 console.warn('heightmap.png not found in public/assets/ — using flat terrain');
             }
         });
-        this.load.image('heightmap', '/assets/heightmap.png');
+        this.load.image('heightmap', `${import.meta.env.BASE_URL}assets/heightmap.png`);
     }
 
     create(): void {
