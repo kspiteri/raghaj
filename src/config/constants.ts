@@ -117,3 +117,7 @@ export const WILD_MIN_DIST     = 600;  // px — min distance from spawn for ini
 export const ZOOM_MIN  = 0.18;
 export const ZOOM_MAX  = 1.0;
 export const ZOOM_STEP = 0.08;  // fractional multiplier per wheel tick
+
+// UI layout (used by UIScene and controllers)
+export const UI_CMD_ROW_H    = 56;
+export const UI_STATUS_BAR_H = 36;

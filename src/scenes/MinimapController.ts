@@ -1,0 +1,176 @@
+import Phaser from 'phaser';
+
+const FONT = "'Lora', Georgia, serif";
+const MAP_MARGIN = 10;
+const TEXTURE_SIZE = 512;
+
+export default class MinimapController {
+    private mapContainer!:  Phaser.GameObjects.Container;
+    private mapImage!:      Phaser.GameObjects.Image;
+    private mapGraphics!:   Phaser.GameObjects.Graphics;
+    private mapFrame!:      Phaser.GameObjects.Graphics;
+    private mapOverlay!:    Phaser.GameObjects.Rectangle;
+    private mapVisible     = false;
+    private mapDrawPtr:    number | null = null;
+    private lastDrawPos    = { x: 0, y: 0 };
+
+    constructor(private scene: Phaser.Scene) {}
+
+    build(): void {
+        // Full-viewport dark overlay — blocks game view (and vignette bleed-through)
+        this.mapOverlay = this.scene.add.rectangle(0, 0, 1, 1, 0x0d0804, 0.92)
+            .setOrigin(0).setDepth(248).setVisible(false);
+
+        this.mapContainer = this.scene.add.container(0, 0).setDepth(250).setVisible(false);
+
+        // Map image — display size set in position()
+        this.mapImage = this.scene.add.image(0, 0, 'minimap-2d').setOrigin(0);
+        // Ink drawing layer (container-local coords)
+        this.mapGraphics = this.scene.add.graphics();
+        // Ornate parchment frame (redrawn in position())
+        this.mapFrame = this.scene.add.graphics();
+
+        const clearBtn = this.scene.add.text(0, 0, 'Clear', {
+            fontSize: '11px', color: '#3a2508', fontStyle: 'bold', fontFamily: FONT,
+            backgroundColor: '#d4b888', padding: { x: 8, y: 3 },
+        }).setName('clearBtn').setInteractive({ useHandCursor: true });
+        clearBtn.on('pointerdown', () => {
+            this.mapGraphics.clear();
+            this.setDrawStyle();
+        });
+
+        const closeBtn = this.scene.add.text(0, 0, '✕ Close', {
+            fontSize: '11px', color: '#3a2508', fontStyle: 'bold', fontFamily: FONT,
+            backgroundColor: '#d4b888', padding: { x: 8, y: 3 },
+        }).setName('closeBtn').setInteractive({ useHandCursor: true });
+        closeBtn.on('pointerdown', () => this.toggle());
+
+        this.mapContainer.add([this.mapImage, this.mapGraphics, this.mapFrame, clearBtn, closeBtn]);
+
+        // ── Drawing handlers ─────────────────────────────────────────────
+        this.scene.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+            if (!this.mapVisible || !this.isPointerInside(ptr.x, ptr.y)) return;
+            if (this.mapDrawPtr !== null) return;
+            this.mapDrawPtr  = ptr.id;
+            this.lastDrawPos = this.screenToMap(ptr.x, ptr.y);
+        });
+
+        this.scene.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
+            if (ptr.id !== this.mapDrawPtr) return;
+            if (!this.isPointerInside(ptr.x, ptr.y)) { this.mapDrawPtr = null; return; }
+            const to = this.screenToMap(ptr.x, ptr.y);
+            this.mapGraphics.beginPath();
+            this.mapGraphics.moveTo(this.lastDrawPos.x, this.lastDrawPos.y);
+            this.mapGraphics.lineTo(to.x, to.y);
+            this.mapGraphics.strokePath();
+            this.lastDrawPos = to;
+        });
+
+        this.scene.input.on('pointerup', (ptr: Phaser.Input.Pointer) => {
+            if (ptr.id === this.mapDrawPtr) this.mapDrawPtr = null;
+        });
+    }
+
+    position(): void {
+        if (!this.mapContainer) return;
+        const { width, height } = this.scene.scale;
+        const ms    = this.getMapSize();
+        const s     = ms / TEXTURE_SIZE;
+
+        // Resize overlay to cover full viewport
+        this.mapOverlay?.setSize(width, height);
+
+        // Center map container
+        this.mapContainer.setScale(s);
+        this.mapContainer.setPosition(
+            Math.round((width  - ms) / 2),
+            Math.round((height - ms) / 2),
+        );
+
+        this.mapImage?.setDisplaySize(TEXTURE_SIZE, TEXTURE_SIZE);
+
+        // Close button: top-right, within border strip
+        const closeBtn = this.mapContainer.getByName('closeBtn') as Phaser.GameObjects.Text | null;
+        closeBtn?.setPosition(TEXTURE_SIZE - 4, 4).setOrigin(1, 0);
+
+        // Clear button: bottom-centre, within border strip
+        const clearBtn = this.mapContainer.getByName('clearBtn') as Phaser.GameObjects.Text | null;
+        clearBtn?.setPosition(TEXTURE_SIZE / 2, TEXTURE_SIZE - 4).setOrigin(0.5, 1);
+
+        this.drawParchmentFrame(TEXTURE_SIZE);
+        this.setDrawStyle();
+    }
+
+    toggle(): void {
+        this.mapVisible = !this.mapVisible;
+        this.mapOverlay.setVisible(this.mapVisible);
+        this.mapContainer.setVisible(this.mapVisible);
+        this.position();
+    }
+
+    createToggleButton(x: number, cy: number): Phaser.GameObjects.Text {
+        const btn = this.scene.add.text(x, cy, '🗺️', { fontSize: '18px' })
+            .setOrigin(0, 0.5).setDepth(200).setInteractive({ useHandCursor: true });
+        btn.on('pointerdown', () => this.toggle());
+        return btn;
+    }
+
+    isPointerInside(px: number, py: number): boolean {
+        if (!this.mapVisible) return false;
+        const ms = this.getMapSize();
+        const { width, height } = this.scene.scale;
+        const mx = Math.round((width  - ms) / 2);
+        const my = Math.round((height - ms) / 2);
+        return px >= mx && px <= mx + ms && py >= my && py <= my + ms;
+    }
+
+    private getMapSize(): number {
+        const { width, height } = this.scene.scale;
+        return Math.min(width, height) - MAP_MARGIN * 2;
+    }
+
+    private screenToMap(sx: number, sy: number): { x: number; y: number } {
+        const s = this.mapContainer.scaleX || 1;
+        return {
+            x: (sx - this.mapContainer.x) / s,
+            y: (sy - this.mapContainer.y) / s,
+        };
+    }
+
+    private setDrawStyle(): void {
+        this.mapGraphics.lineStyle(2, 0x3a2508, 0.80);
+    }
+
+    private drawParchmentFrame(size: number): void {
+        if (!this.mapFrame) return;
+        this.mapFrame.clear();
+
+        const INK   = 0x3a2508;
+        const PARCH = 0xd4b888;
+        const B     = 9;   // border strip width in local px
+
+        // Parchment border strip
+        this.mapFrame.fillStyle(PARCH, 0.95);
+        this.mapFrame.fillRect(0, 0, size, B);
+        this.mapFrame.fillRect(0, size - B, size, B);
+        this.mapFrame.fillRect(0, B, B, size - B * 2);
+        this.mapFrame.fillRect(size - B, B, B, size - B * 2);
+
+        // Outer ink line
+        this.mapFrame.lineStyle(1.5, INK, 0.88);
+        this.mapFrame.strokeRect(0.5, 0.5, size - 1, size - 1);
+        // Inner ink line
+        this.mapFrame.lineStyle(0.8, INK, 0.55);
+        this.mapFrame.strokeRect(B - 1, B - 1, size - (B - 1) * 2, size - (B - 1) * 2);
+
+        // Corner crosshairs
+        const T = 5;
+        this.mapFrame.lineStyle(1.2, INK, 0.72);
+        for (const [cx, cy] of [[B, B], [size - B, B], [B, size - B], [size - B, size - B]] as [number, number][]) {
+            this.mapFrame.beginPath();
+            this.mapFrame.moveTo(cx - T, cy); this.mapFrame.lineTo(cx + T, cy);
+            this.mapFrame.moveTo(cx, cy - T); this.mapFrame.lineTo(cx, cy + T);
+            this.mapFrame.strokePath();
+        }
+    }
+}

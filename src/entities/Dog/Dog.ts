@@ -10,20 +10,11 @@ import {
     DOG_GATHER_RADIUS,
     WORLD_WIDTH,
     WORLD_HEIGHT,
-    DOG_TRUST_INITIAL,
-    PRAISE_BASE_COOLDOWN_MS,
-    PRAISE_WINDOW_MS,
-    PRAISE_MAX_COMBO,
     DOG_STOP_DECAY_START_MS,
-    DOG_STOP_DECAY_RATE,
-    DOG_IDLE_DECAY_INTERVAL_MS,
     TRUST_HIGH_THRESHOLD,
-    TRUST_LOW_THRESHOLD,
-    TRUST_LOW_IGNORE_CHANCE,
     TRUST_HIGH_SPEED_FACTOR,
     DOG_STOP_MAX_MS,
     MUR_SHEPHERD_RADIUS,
-    TREAT_TRUST_BONUS,
     EJJA_DURATION_MIN_MS,
     EJJA_DURATION_MAX_MS,
     IEQAF_DURATION_MIN_MS,
@@ -32,6 +23,7 @@ import {
 } from '../../config/constants';
 import { SheepData } from '../Sheep/Sheep';
 import { isoProject } from '../../utils/iso';
+import DogTrust from './DogTrust';
 
 const DOG_SPRITE_SCALE = 0.15;
 
@@ -45,14 +37,10 @@ export default class Dog extends BaseEntity {
     private autonomousTimer = 0;
 
     // Trust
-    trust: number = DOG_TRUST_INITIAL;
-    private praiseTimer    = 0;
-    private praiseCombo    = 0;
-    private praiseWindow   = 0;
+    private trust: DogTrust;
     private stopTimer      = 0;
     // Recalculated each IEQAF command based on current trust; persists until next IEQAF
     private stopMaxMs      = DOG_STOP_MAX_MS;
-    private idleDecayTimer = 0;
 
     // Ejja session
     private ejjaActive     = false;
@@ -69,6 +57,7 @@ export default class Dog extends BaseEntity {
         this.isSea = isSea;
         this.targetX = x;
         this.targetY = y;
+        this.trust = new DogTrust(scene, () => ({ x: this.x, y: this.y }));
 
         const iso = isoProject(x, y);
         this.sprite = scene.add.sprite(iso.x, iso.y, 'dog')
@@ -80,7 +69,7 @@ export default class Dog extends BaseEntity {
 
     // ── Trust API ────────────────────────────────────────────────────────────
 
-    getTrust(): number { return this.trust; }
+    getTrust(): number { return this.trust.getTrust(); }
 
     /** Returns 0–1 fraction of ejja time remaining, or null when not active. */
     getEjjaProgress(): number | null {
@@ -89,12 +78,11 @@ export default class Dog extends BaseEntity {
     }
 
     addTrust(amount: number): void {
-        this.trust = Phaser.Math.Clamp(this.trust + amount, 0, 100);
+        this.trust.addTrust(amount);
     }
 
     giveTreat(): void {
-        this.addTrust(TREAT_TRUST_BONUS);
-        this.showHeartEffect('❤️');
+        this.trust.giveTreat();
     }
 
     /**
@@ -103,42 +91,17 @@ export default class Dog extends BaseEntity {
      * Cooldown after the window closes = PRAISE_BASE_COOLDOWN_MS × combo count.
      */
     praise(): void {
-        if (this.praiseTimer > 0) return; // on cooldown
-
-        if (this.praiseWindow <= 0) {
-            // Fresh press — start a new combo window
-            this.praiseCombo = 0;
-        }
-
-        if (this.praiseCombo >= PRAISE_MAX_COMBO) return; // combo maxed
-
-        this.praiseCombo++;
-        this.praiseWindow = PRAISE_WINDOW_MS;
-        this.addTrust(1);
-        this.showHeartEffect(`❤️ +${this.praiseCombo}`);
+        this.trust.praise();
     }
 
     /** Floating emoji/text above the dog that rises and fades over ~1s. */
     showHeartEffect(text: string): void {
-        const iso = isoProject(this.x, this.y);
-        const label = this.scene.add.text(iso.x, iso.y - 60, text, {
-            fontSize: '18px', fontFamily: "'Lora', Georgia, serif",
-        }).setOrigin(0.5, 1).setDepth(99999);
-
-        this.scene.tweens.add({
-            targets: label,
-            y:       label.y - 40,
-            alpha:   0,
-            duration: 900,
-            ease: 'Sine.easeOut',
-            onComplete: () => label.destroy(),
-        });
+        this.trust.showHeartEffect(text);
     }
 
     /** Returns false if trust is low and a random roll triggers an ignore. */
     canExecuteCommand(): boolean {
-        if (this.trust >= TRUST_LOW_THRESHOLD) return true;
-        return Math.random() > TRUST_LOW_IGNORE_CHANCE;
+        return this.trust.canExecuteCommand();
     }
 
     // ── Commands ─────────────────────────────────────────────────────────────
@@ -168,7 +131,7 @@ export default class Dog extends BaseEntity {
             case 'EJJA':
                 this.ejjaActive = true;
                 this.ejjaTimer  = Phaser.Math.Linear(
-                    EJJA_DURATION_MIN_MS, EJJA_DURATION_MAX_MS, this.trust / 100,
+                    EJJA_DURATION_MIN_MS, EJJA_DURATION_MAX_MS, this.trust.getTrust() / 100,
                 );
                 this.ejjaTotalMs    = this.ejjaTimer;
                 this.ejjaStrayTimer = 0;
@@ -180,7 +143,7 @@ export default class Dog extends BaseEntity {
                 this.ejjaTimer      = 0;
                 this.ejjaStrayTimer = 0;
                 this.stopMaxMs  = Phaser.Math.Linear(
-                    IEQAF_DURATION_MIN_MS, DOG_STOP_MAX_MS, this.trust / 100,
+                    IEQAF_DURATION_MIN_MS, DOG_STOP_MAX_MS, this.trust.getTrust() / 100,
                 );
                 break;
         }
@@ -189,7 +152,7 @@ export default class Dog extends BaseEntity {
     // ── Autonomous tickers ───────────────────────────────────────────────────
 
     private get autonomousInterval(): number {
-        return this.trust >= TRUST_HIGH_THRESHOLD
+        return this.trust.getTrust() >= TRUST_HIGH_THRESHOLD
             ? DOG_AUTONOMOUS_INTERVAL * TRUST_HIGH_SPEED_FACTOR
             : DOG_AUTONOMOUS_INTERVAL;
     }
@@ -338,20 +301,7 @@ export default class Dog extends BaseEntity {
         const dt = delta / 1000;
 
         // Trust timers
-        if (this.praiseTimer > 0)    this.praiseTimer  = Math.max(0, this.praiseTimer - delta);
-        if (this.praiseWindow > 0) {
-            this.praiseWindow -= delta;
-            if (this.praiseWindow <= 0 && this.praiseCombo > 0) {
-                // Window closed — start cooldown proportional to combo count
-                this.praiseTimer = PRAISE_BASE_COOLDOWN_MS * this.praiseCombo;
-                this.praiseCombo = 0;
-            }
-        }
-        if (this.idleDecayTimer > 0)  this.idleDecayTimer -= delta;
-        if (this.idleDecayTimer <= 0) {
-            this.addTrust(-1);
-            this.idleDecayTimer = DOG_IDLE_DECAY_INTERVAL_MS;
-        }
+        this.trust.tick(delta);
 
         // Ejja session timer
         if (this.ejjaActive) {
@@ -366,7 +316,7 @@ export default class Dog extends BaseEntity {
         if (this.state === DogState.STOPPED) {
             this.stopTimer += delta;
             if (this.stopTimer > DOG_STOP_DECAY_START_MS) {
-                this.addTrust(-DOG_STOP_DECAY_RATE * dt);
+                this.trust.stopDecay(dt);
             }
             if (this.stopTimer >= this.stopMaxMs) {
                 this.state = DogState.IDLE;
