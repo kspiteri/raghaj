@@ -7,6 +7,7 @@ import {
     DOG_REPULSION_RADIUS,
     DOG_AUTONOMOUS_INTERVAL,
     DOG_STRAY_THRESHOLD,
+    DOG_GATHER_RADIUS,
     WORLD_WIDTH,
     WORLD_HEIGHT,
     DOG_TRUST_INITIAL,
@@ -26,11 +27,13 @@ import {
     EJJA_DURATION_MIN_MS,
     EJJA_DURATION_MAX_MS,
     IEQAF_DURATION_MIN_MS,
+    EJJA_STRAY_DETOUR_MS,
+    DOG_FOLLOW_OFFSET,
 } from '../../config/constants';
 import { SheepData } from '../Sheep/Sheep';
 import { isoProject } from '../../utils/iso';
 
-const SCALE = 0.15;
+const DOG_SPRITE_SCALE = 0.15;
 
 export default class Dog extends BaseEntity {
     private sprite: Phaser.GameObjects.Sprite;
@@ -47,14 +50,19 @@ export default class Dog extends BaseEntity {
     private praiseCombo    = 0;
     private praiseWindow   = 0;
     private stopTimer      = 0;
-    private stopMaxMs      = DOG_STOP_MAX_MS;  // set per-command based on trust
+    // Recalculated each IEQAF command based on current trust; persists until next IEQAF
+    private stopMaxMs      = DOG_STOP_MAX_MS;
     private idleDecayTimer = 0;
 
     // Ejja session
     private ejjaActive     = false;
     private ejjaTimer      = 0;
-    private ejjaTotalMs    = 0;   // initial duration — used to compute progress fraction
-    private ejjaStrayTimer = 0;   // ms remaining on a stray-detour target
+    private ejjaTotalMs    = 0;
+    private ejjaStrayTimer = 0;
+
+    // Fetch (auto-herd a newly joined wild sheep)
+    private fetchSheep: SheepData | null = null;
+    private fetchHome:  SheepData | null = null;
 
     constructor(scene: Phaser.Scene, x: number, y: number, isSea: (wx: number, wy: number) => boolean) {
         super(scene, x, y);
@@ -64,7 +72,7 @@ export default class Dog extends BaseEntity {
 
         const iso = isoProject(x, y);
         this.sprite = scene.add.sprite(iso.x, iso.y, 'dog')
-            .setScale(SCALE)
+            .setScale(DOG_SPRITE_SCALE)
             .setOrigin(0.5, 1.0)
             .setDepth(x + y);
         this.sprite.play('dog-idle');
@@ -135,7 +143,7 @@ export default class Dog extends BaseEntity {
 
     // ── Commands ─────────────────────────────────────────────────────────────
 
-    receiveCommand(command: DogCommand, shepherdX: number, shepherdY: number): void {
+    receiveCommand(command: DogCommand, _shepherdX: number, _shepherdY: number): void {
         if (command !== 'BRAVU' && !this.canExecuteCommand()) return; // silently ignored
 
         if (command === 'BRAVU') {
@@ -166,10 +174,11 @@ export default class Dog extends BaseEntity {
                 this.ejjaStrayTimer = 0;
                 break;
             case 'IEQAF':
-                this.targetX  = this.x;
-                this.targetY  = this.y;
-                this.ejjaActive = false;
-                this.ejjaTimer  = 0;
+                this.targetX        = this.x;
+                this.targetY        = this.y;
+                this.ejjaActive     = false;
+                this.ejjaTimer      = 0;
+                this.ejjaStrayTimer = 0;
                 this.stopMaxMs  = Phaser.Math.Linear(
                     IEQAF_DURATION_MIN_MS, DOG_STOP_MAX_MS, this.trust / 100,
                 );
@@ -179,18 +188,22 @@ export default class Dog extends BaseEntity {
 
     // ── Autonomous tickers ───────────────────────────────────────────────────
 
+    private get autonomousInterval(): number {
+        return this.trust >= TRUST_HIGH_THRESHOLD
+            ? DOG_AUTONOMOUS_INTERVAL * TRUST_HIGH_SPEED_FACTOR
+            : DOG_AUTONOMOUS_INTERVAL;
+    }
+
     tickAutonomous(sheep: SheepData[], shepherdX: number, shepherdY: number, delta: number): void {
-        if (this.ejjaActive)              this.tickEJJA(sheep, shepherdX, shepherdY, delta);
-        else if (this.state === DogState.IDLE) this.tickMUR(sheep, shepherdX, shepherdY, delta);
+        if (this.fetchSheep)                       this.tickFetch();
+        else if (this.ejjaActive)                  this.tickEJJA(sheep, shepherdX, shepherdY, delta);
+        else if (this.state === DogState.IDLE)     this.tickMUR(sheep, shepherdX, shepherdY, delta);
     }
 
     /** Free mode — nudge stray sheep within MUR_SHEPHERD_RADIUS of shepherd. */
     private tickMUR(sheep: SheepData[], shepherdX: number, shepherdY: number, delta: number): void {
         this.autonomousTimer += delta;
-        const interval = this.trust >= TRUST_HIGH_THRESHOLD
-            ? DOG_AUTONOMOUS_INTERVAL * TRUST_HIGH_SPEED_FACTOR
-            : DOG_AUTONOMOUS_INTERVAL;
-        if (this.autonomousTimer < interval) return;
+        if (this.autonomousTimer < this.autonomousInterval) return;
         this.autonomousTimer = 0;
 
         if (sheep.length === 0) return;
@@ -227,10 +240,7 @@ export default class Dog extends BaseEntity {
 
         // Periodic stray check
         this.autonomousTimer += delta;
-        const interval = this.trust >= TRUST_HIGH_THRESHOLD
-            ? DOG_AUTONOMOUS_INTERVAL * TRUST_HIGH_SPEED_FACTOR
-            : DOG_AUTONOMOUS_INTERVAL;
-        if (this.autonomousTimer >= interval) {
+        if (this.autonomousTimer >= this.autonomousInterval) {
             this.autonomousTimer = 0;
 
             let farthestStray: SheepData | null = null;
@@ -247,7 +257,7 @@ export default class Dog extends BaseEntity {
                 const dist = Math.hypot(dx, dy);
                 this.targetX = farthestStray.x - (dx / dist) * (DOG_REPULSION_RADIUS * 0.6);
                 this.targetY = farthestStray.y - (dy / dist) * (DOG_REPULSION_RADIUS * 0.6);
-                this.ejjaStrayTimer = 4_000;
+                this.ejjaStrayTimer = EJJA_STRAY_DETOUR_MS;
                 this.state = DogState.HERDING;
                 return;
             }
@@ -257,10 +267,56 @@ export default class Dog extends BaseEntity {
         const toBehindX = this.x - shepherdX;
         const toBehindY = this.y - shepherdY;
         const toBehindDist = Math.hypot(toBehindX, toBehindY) || 1;
-        const FOLLOW_OFFSET = 90; // px — how far behind the shepherd the dog trails
-        this.targetX = shepherdX + (toBehindX / toBehindDist) * FOLLOW_OFFSET;
-        this.targetY = shepherdY + (toBehindY / toBehindDist) * FOLLOW_OFFSET;
+        this.targetX = shepherdX + (toBehindX / toBehindDist) * DOG_FOLLOW_OFFSET;
+        this.targetY = shepherdY + (toBehindY / toBehindDist) * DOG_FOLLOW_OFFSET;
         this.state   = DogState.HERDING;
+    }
+
+    // ── Fetch ─────────────────────────────────────────────────────────────────
+
+    /** Called when a wild sheep joins. Dog goes to collect it and herd it to the nearest flock member. */
+    startFetch(newSheep: SheepData, flockSheep: SheepData[]): void {
+        if (this.ejjaActive || this.state === DogState.STOPPED) return;
+
+        let nearest: SheepData | null = null;
+        let nearestDist = Infinity;
+        for (const s of flockSheep) {
+            if (s.isWild || s === newSheep) continue;
+            const d = Math.hypot(s.x - newSheep.x, s.y - newSheep.y);
+            if (d < nearestDist) { nearestDist = d; nearest = s; }
+        }
+        if (!nearest) return;
+
+        this.fetchSheep = newSheep;
+        this.fetchHome  = nearest;
+        this.state      = DogState.HERDING;
+        this.autonomousTimer = 0;
+        this.updateFetchTarget();
+    }
+
+    private updateFetchTarget(): void {
+        if (!this.fetchSheep || !this.fetchHome) return;
+        const dx = this.fetchSheep.x - this.fetchHome.x;
+        const dy = this.fetchSheep.y - this.fetchHome.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        this.targetX = this.fetchSheep.x + (dx / dist) * (DOG_REPULSION_RADIUS * 0.6);
+        this.targetY = this.fetchSheep.y + (dy / dist) * (DOG_REPULSION_RADIUS * 0.6);
+    }
+
+    private tickFetch(): void {
+        if (!this.fetchSheep || !this.fetchHome) return;
+        const distToHome = Math.hypot(
+            this.fetchSheep.x - this.fetchHome.x,
+            this.fetchSheep.y - this.fetchHome.y,
+        );
+        if (distToHome <= DOG_GATHER_RADIUS) {
+            this.fetchSheep = null;
+            this.fetchHome  = null;
+            this.state      = DogState.IDLE;
+            return;
+        }
+        this.updateFetchTarget();
+        this.state = DogState.HERDING;
     }
 
     // ── Repulsion ────────────────────────────────────────────────────────────

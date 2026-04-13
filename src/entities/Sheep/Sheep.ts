@@ -10,4 +10,5 @@ export interface SheepData {
     strayTimer: number;  // seconds spent on bare ground; resets on grass
     isStray: boolean;    // true after STRAY_TIME_THRESHOLD seconds on bare
     isGuided: boolean;   // true while shepherd guide ability is active
+    isWild: boolean;     // true until shepherd comes within WILD_JOIN_RADIUS
 }

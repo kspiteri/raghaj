@@ -90,6 +90,8 @@ export const MUR_SHEPHERD_RADIUS    = 400;         // px — MUR mode acts withi
 export const EJJA_DURATION_MIN_MS   = 8_000;       // at trust=0
 export const EJJA_DURATION_MAX_MS   = 45_000;      // at trust=100
 export const IEQAF_DURATION_MIN_MS  = 10_000;      // at trust=0 (max = DOG_STOP_MAX_MS)
+export const EJJA_STRAY_DETOUR_MS   = 4_000;       // how long dog holds a stray-detour target
+export const DOG_FOLLOW_OFFSET      = 90;          // px — how far behind shepherd dog trails in Ejja
 
 // Treats
 export const TREAT_SPAWN_COUNT    = 5;
@@ -105,6 +107,11 @@ export const MOOD_LOW_THRESHOLD        = 0.3;
 export const MOOD_HIGH_COHESION_BONUS  = 1.4;
 export const MOOD_LOW_SEP_BONUS        = 1.6;
 export const MOOD_UPDATE_INTERVAL_MS   = 500;
+
+// Wild sheep
+export const WILD_SHEEP_COUNT  = 30;   // scattered across world at startup
+export const WILD_JOIN_RADIUS  = 250;  // px — shepherd proximity to trigger join
+export const WILD_MIN_DIST     = 600;  // px — min distance from spawn for initial placement
 
 // Zoom
 export const ZOOM_MIN  = 0.18;

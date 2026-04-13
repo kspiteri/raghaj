@@ -10,7 +10,7 @@ import SaveSystem from '../systems/SaveSystem';
 import GrassSystem from '../systems/GrassSystem';
 import TreatSystem from '../systems/TreatSystem';
 import VignettePipeline from '../pipelines/VignettePipeline';
-import { WORLD_WIDTH, WORLD_HEIGHT, TILE_SIZE, GUIDE_RADIUS, MOOD_UPDATE_INTERVAL_MS } from '../config/constants';
+import { WORLD_WIDTH, WORLD_HEIGHT, TILE_SIZE, GUIDE_RADIUS, MOOD_UPDATE_INTERVAL_MS, WILD_SHEEP_COUNT, WILD_MIN_DIST, WILD_JOIN_RADIUS } from '../config/constants';
 import { Poem } from '../systems/PoetrySystem';
 
 export default class GameScene extends Phaser.Scene {
@@ -29,7 +29,6 @@ export default class GameScene extends Phaser.Scene {
 
     private flockMood   = 0.5;
     private moodTimer   = 0;
-    private zoneCheckTimer = 0;
 
     constructor() {
         super({ key: 'GameScene' });
@@ -61,6 +60,8 @@ export default class GameScene extends Phaser.Scene {
         this.treatSystem  = new TreatSystem(this, 5, this.isSea, this.shepherd);
         this.flockSystem  = new FlockSystem();
 
+        this.spawnWildSheep(cx, cy);
+
         this.commandSystem = new CommandSystem(this.dog, () => ({
             x: this.shepherd.x,
             y: this.shepherd.y,
@@ -84,6 +85,20 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
+    private spawnWildSheep(spawnX: number, spawnY: number): void {
+        let placed = 0;
+        let attempts = 0;
+        while (placed < WILD_SHEEP_COUNT && attempts < WILD_SHEEP_COUNT * 20) {
+            attempts++;
+            const x = Math.random() * WORLD_WIDTH;
+            const y = Math.random() * WORLD_HEIGHT;
+            if (this.isSeaOrChannel(x, y)) continue;
+            if (Math.hypot(x - spawnX, y - spawnY) < WILD_MIN_DIST) continue;
+            this.flock.addWild(x, y);
+            placed++;
+        }
+    }
+
     private showPoem(poem: Poem): void {
         this.scene.get('UIScene').events.emit('show-poem', poem);
     }
@@ -103,6 +118,25 @@ export default class GameScene extends Phaser.Scene {
                 Math.hypot(s.x - this.shepherd.x, s.y - this.shepherd.y) < GUIDE_RADIUS;
         }
 
+        // Wild sheep join when shepherd gets close
+        for (const s of this.flock.sheep) {
+            if (!s.isWild) continue;
+            if (Math.hypot(s.x - this.shepherd.x, s.y - this.shepherd.y) < WILD_JOIN_RADIUS) {
+                s.isWild = false;
+                s.sprite.clearTint();
+                this.dog.startFetch(s, this.flock.sheep);
+                // Brief scale pulse so the join is obvious
+                this.tweens.add({
+                    targets:  s.sprite,
+                    scaleX:   0.18,
+                    scaleY:   0.18,
+                    duration: 180,
+                    yoyo:     true,
+                    ease:     'Sine.easeOut',
+                });
+            }
+        }
+
         this.flockSystem.update(
             this.flock.sheep, this.dog, [], this.shepherd.x, this.shepherd.y,
             delta, this.isSeaOrChannel, this.grassSystem, this.flockMood,
@@ -115,15 +149,6 @@ export default class GameScene extends Phaser.Scene {
             this.moodTimer = 0;
             this.flockMood = this.grassSystem.averageGrassUnder(this.flock.sheep);
             this.scene.get('UIScene').events.emit('mood-update', this.flockMood);
-        }
-
-        // Grazing zone check (every 2s) — wired but poems disabled
-        this.zoneCheckTimer += delta;
-        if (this.zoneCheckTimer >= 2000) {
-            this.zoneCheckTimer = 0;
-            this.grassSystem.checkGrazingZones((_zoneId) => {
-                // this.poetrySystem.triggerPoem(); — enable when poems are ready
-            });
         }
 
         this.poetrySystem.update(this.shepherd.isMoving, delta);

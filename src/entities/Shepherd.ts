@@ -41,9 +41,15 @@ export default class Shepherd extends BaseEntity {
         if (Math.abs(screenXDir) > 0.05) this.facingRight = screenXDir > 0;
     }
 
+    /** Consume one treat. Returns true if a treat was available. */
+    giveOneTreat(): boolean {
+        if (this.treatCount <= 0) return false;
+        this.treatCount--;
+        return true;
+    }
+
     /** Activate guide ability. Returns false if on cooldown. */
-    activateGuide(): boolean {
-        if (this.guideCooldown > 0) return false;
+    activateGuide(): boolean {        if (this.guideCooldown > 0) return false;
         this.guideActive   = true;
         this.guideTimer    = GUIDE_DURATION_MS;
         this.guideCooldown = GUIDE_COOLDOWN_MS;

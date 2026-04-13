@@ -355,7 +355,7 @@ export default class UIScene extends Phaser.Scene {
         this.positionMinimap();
 
         const wasVisible = this.poemContainer.alpha > 0;
-        this.buildPoemOverlay(width, height);
+        this.buildPoemOverlay(height);
         if (wasVisible && this.currentPoem) this.updatePoemText();
         this.poemContainer.setPosition(width / 2, height / 2 - HUD_H / 2);
     }
@@ -427,12 +427,12 @@ export default class UIScene extends Phaser.Scene {
             guideTooltipText.setText('Nearby sheep follow\nyou for 8 seconds');
             const padX = 14, padY = 8;
             guideTooltipBg.setSize(guideTooltipText.width + padX * 2, guideTooltipText.height + padY * 2);
-            this.guideTooltip!.setPosition(pillX, cy - STATUS_BAR_H / 2 - guideTooltipBg.height / 2 - 4).setVisible(true);
+            this.guideTooltip?.setPosition(pillX, cy - STATUS_BAR_H / 2 - guideTooltipBg.height / 2 - 4).setVisible(true);
         });
-        this.guidePill.on('pointerout',  () => this.guideTooltip!.setVisible(false));
+        this.guidePill.on('pointerout',  () => this.guideTooltip?.setVisible(false));
         this.guidePill.on('pointerdown', () => {
             this.shepherd.activateGuide();
-            this.guideTooltip!.setVisible(false);
+            this.guideTooltip?.setVisible(false);
         });
 
         this.guideFill = this.add.rectangle(pillX - pillW / 2, cy, pillW, STATUS_BAR_H - 10, 0x40d0d0, 0.35)
@@ -531,20 +531,19 @@ export default class UIScene extends Phaser.Scene {
                 tooltipText.setText(def.description);
                 const padX = 14, padY = 8;
                 tooltipBg.setSize(tooltipText.width + padX * 2, tooltipText.height + padY * 2);
-                this.cmdTooltip!
-                    .setPosition(cx, rowY - tooltipBg.height / 2 - 6)
+                this.cmdTooltip
+                    ?.setPosition(cx, rowY - tooltipBg.height / 2 - 6)
                     .setVisible(true);
             });
             btn.on('pointerout', () => {
                 btn.setFillStyle(baseFill, 0.0);
-                this.cmdTooltip!.setVisible(false);
+                this.cmdTooltip?.setVisible(false);
             });
             if (isAghti) {
                 btn.on('pointerdown', () => {
-                    this.cmdTooltip!.setVisible(false);
+                    this.cmdTooltip?.setVisible(false);
                     const dist = Math.hypot(this.shepherd.x - this.dog.x, this.shepherd.y - this.dog.y);
-                    if (this.shepherd.treatCount > 0 && dist < TREAT_GIVE_RADIUS) {
-                        this.shepherd.treatCount--;
+                    if (dist < TREAT_GIVE_RADIUS && this.shepherd.giveOneTreat()) {
                         this.dog.giveTreat();
                         btn.setFillStyle(hitFill, 0.9);
                         this.time.delayedCall(120, () => btn.setFillStyle(baseFill, 0.0));
@@ -553,7 +552,7 @@ export default class UIScene extends Phaser.Scene {
             } else {
                 btn.on('pointerdown', () => {
                     this.commandSystem.dispatch(def.command);
-                    this.cmdTooltip!.setVisible(false);
+                    this.cmdTooltip?.setVisible(false);
                     btn.setFillStyle(hitFill, 0.9);
                     this.time.delayedCall(120, () => btn.setFillStyle(baseFill, 0.0));
                 });
@@ -572,7 +571,7 @@ export default class UIScene extends Phaser.Scene {
 
     // ── Poem overlay ──────────────────────────────────────────────────────────
 
-    private buildPoemOverlay(width: number, height: number): void {
+    private buildPoemOverlay(height: number): void {
         this.poemContainer.removeAll(true);
 
         const pw    = panelW(height);
@@ -612,8 +611,6 @@ export default class UIScene extends Phaser.Scene {
         });
 
         this.poemContainer.add([border, bg, title, body, author, toggle, close]);
-
-        void width;
     }
 
     private displayPoem(poem: Poem): void {
@@ -734,8 +731,8 @@ export default class UIScene extends Phaser.Scene {
         if (!this.mapContainer) return;
         const { width, height } = this.scale;
         const ms    = this.getMapSize();
-        const BUILT = 512;
-        const s     = ms / BUILT;
+        const TEXTURE_SIZE = 512;
+        const s     = ms / TEXTURE_SIZE;
 
         // Resize overlay to cover full viewport
         this.mapOverlay?.setSize(width, height);
@@ -747,17 +744,17 @@ export default class UIScene extends Phaser.Scene {
             Math.round((height - ms) / 2),
         );
 
-        this.mapImage?.setDisplaySize(BUILT, BUILT);
+        this.mapImage?.setDisplaySize(TEXTURE_SIZE, TEXTURE_SIZE);
 
         // Close button: top-right, within border strip
         const closeBtn = this.mapContainer.getByName('closeBtn') as Phaser.GameObjects.Text | null;
-        closeBtn?.setPosition(BUILT - 4, 4).setOrigin(1, 0);
+        closeBtn?.setPosition(TEXTURE_SIZE - 4, 4).setOrigin(1, 0);
 
         // Clear button: bottom-centre, within border strip
         const clearBtn = this.mapContainer.getByName('clearBtn') as Phaser.GameObjects.Text | null;
-        clearBtn?.setPosition(BUILT / 2, BUILT - 4).setOrigin(0.5, 1);
+        clearBtn?.setPosition(TEXTURE_SIZE / 2, TEXTURE_SIZE - 4).setOrigin(0.5, 1);
 
-        this.drawParchmentFrame(BUILT);
+        this.drawParchmentFrame(TEXTURE_SIZE);
         this.setDrawStyle();
     }
 

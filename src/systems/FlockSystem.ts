@@ -92,6 +92,32 @@ export default class FlockSystem {
                 continue;
             }
 
+            // ── Wild sheep: wander + dog repulsion only, no boids ────────────
+            if (s.isWild) {
+                s.wanderAngle += (Math.random() - 0.5) * WANDER_TURN_RATE * 2 * dt;
+                s.vx += Math.cos(s.wanderAngle) * BOID_WANDER_STRENGTH;
+                s.vy += Math.sin(s.wanderAngle) * BOID_WANDER_STRENGTH;
+
+                const rep = dog.getRepulsionVector(s.x, s.y);
+                const dogInfluence = Math.hypot(rep.x, rep.y);
+                s.vx += rep.x * BOID_DOG_REPULSION;
+                s.vy += rep.y * BOID_DOG_REPULSION;
+
+                const spd = Math.hypot(s.vx, s.vy);
+                const maxSpd = dogInfluence > 0.1 ? SHEEP_FLEE_SPEED : SHEEP_GRAZE_SPEED;
+                if (spd > maxSpd) { s.vx = (s.vx / spd) * maxSpd; s.vy = (s.vy / spd) * maxSpd; }
+                s.vx *= 0.92; s.vy *= 0.92;
+                s.x += s.vx * dt; s.y += s.vy * dt;
+
+                if (isSea && isSea(s.x, s.y)) {
+                    s.vx = -s.vx; s.vy = -s.vy;
+                    s.x += s.vx * dt * 2; s.y += s.vy * dt * 2;
+                }
+                s.x = Math.max(10, Math.min(s.x, WORLD_WIDTH  - 10));
+                s.y = Math.max(10, Math.min(s.y, WORLD_HEIGHT - 10));
+                continue;
+            }
+
             // ── Boids ────────────────────────────────────────────────────────
             const currentSpeed = Math.hypot(s.vx, s.vy);
             const grazing = currentSpeed < SHEEP_GRAZE_SPEED * 0.5;

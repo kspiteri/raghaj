@@ -6,7 +6,7 @@ import { isoProject } from '../../utils/iso';
 const NUM_GROUPS   = 8;
 const GROUP_SPREAD = 40;   // px — radius of each cluster
 const HERD_SPREAD  = 280;  // px — how far groups are from the anchor
-const SCALE        = 0.12;
+const SPRITE_SCALE = 0.12;
 const GOAT_RATIO   = 0.15;
 
 export default class Flock {
@@ -53,7 +53,7 @@ export default class Flock {
                 const key = Math.random() < GOAT_RATIO ? 'goat' : 'sheep';
                 const iso = isoProject(x, y);
                 const sprite = this.scene.add.sprite(iso.x, iso.y, key)
-                    .setScale(SCALE)
+                    .setScale(SPRITE_SCALE)
                     .setOrigin(0.5, 1.0)
                     .setDepth(x + y);
                 sprite.play(`${key}-walk`);
@@ -65,9 +65,30 @@ export default class Flock {
                     strayTimer: 0,
                     isStray: false,
                     isGuided: false,
+                    isWild: false,
                 });
             }
         }
+    }
+
+    addWild(x: number, y: number): void {
+        const key = Math.random() < GOAT_RATIO ? 'goat' : 'sheep';
+        const iso = isoProject(x, y);
+        const sprite = this.scene.add.sprite(iso.x, iso.y, key)
+            .setScale(SPRITE_SCALE)
+            .setOrigin(0.5, 1.0)
+            .setDepth(x + y)
+            .setTint(0xaaaaaa);
+        sprite.play(`${key}-walk`);
+        this.sheep.push({
+            x, y, vx: 0, vy: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            sprite,
+            strayTimer: 0,
+            isStray: false,
+            isGuided: false,
+            isWild: true,
+        });
     }
 
     syncSprites(): void {
