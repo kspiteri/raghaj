@@ -1,41 +1,51 @@
 # Ragħaj — Development Roadmap
 
-## Phase 1: Prototype
+## Phase 1: Prototype ✓ Complete
 
-Goal: Playable core loop. One dog, basic terrain, herding works, poems appear.
-
-**Stack:** Vite + Phaser 3 (pure 2D) + TypeScript + pnpm — no Three.js.
-
-- [ ] Project scaffold
-- [ ] Phaser 2D isometric-style top-down view (angled camera illusion via sprite art)
-- [ ] Basic tiled garigue ground + a few dry-stone wall sprites
-- [ ] Shepherd entity with virtual joystick movement
-- [ ] Flock of 200 sheep with boids (cohesion / separation / alignment)
-- [ ] One dog — state machine: idle / moving / herding
-- [ ] 4 Phase 1 commands: Ejja l-hawn / Oqgħod / Mur / Waqqaf
-- [ ] Command buttons UI (Maltese label + English phonetic hint, touch-friendly)
-- [ ] Dog exerts repulsion vector on nearby sheep
-- [ ] Poetry system: JSON-driven, text-only, calm-moment trigger (~10s still)
-- [ ] 3–4 placeholder poems (Maltese + English subtitle toggle)
-- [ ] localStorage save: flock count + unlocked poems
+- [x] Project scaffold (Vite + Phaser 3 + TypeScript + pnpm)
+- [x] Isometric-style top-down view via `isoProject()` utility
+- [x] Chunked procedural terrain (garigue, coast, elevation levels, sea)
+- [x] Shepherd entity with virtual joystick, run speed, camera follow
+- [x] Flock of 200 sheep with boids (cohesion / separation / alignment)
+- [x] One dog — state machine: idle / herding / stopped
+- [x] Commands: Mur / Ejja / Ieqaf / Bravu! / Agħti / Mexxi
+- [x] Command buttons UI (Maltese labels, Cinzel font, English tooltips on hover)
+- [x] Dog repulsion vector on nearby sheep
+- [x] Dog trust system (0–100, treats, praise combos, idle decay)
+- [x] Treat collectibles (5 on map, spawn near player, shepherd collects + gives to dog)
+- [x] Grass system — per-tile levels, regrowth, eat when grazing, bare-ground repulsion
+- [x] Stray sheep — bare-ground timer, wander multiplier, stray flag
+- [x] Flock mood — average grass level, scales cohesion/separation boid weights
+- [x] Mexxi (guide) ability — nearby sheep orbit shepherd for 8s, 30s cooldown
+- [x] Ejja continuous follow — dog trails behind shepherd, periodic stray detours
+- [x] Trust-timed Ejja/Ieqaf duration (lerp min→max with trust)
+- [x] Poetry system (wired, poems disabled pending content)
+- [x] localStorage save: flock count + unlocked poems
+- [x] HiDPI canvas (devicePixelRatio), WebGL vignette post-processing
+- [x] Voice input (SpeechRecognition, keyword matching, no locale lock)
 
 ---
 
-## Phase 2: Core Release
+## Phase 2: Gameplay Depth
 
-Goal: Full feature set, two dogs, all commands, predators, real poems.
+Goal: Meaningful consequences, emergent events, richer progression.
 
+- [ ] **Flock growth** — wild sheep at map edges wander in; approach slowly and they join
+- [ ] **Flock births** — high mood + sustained good grazing occasionally adds a lamb
+- [ ] **Permanent stray loss** — sheep that reaches the map edge is lost from the count
+- [ ] **Day/night cycle** — visual lighting shift; sheep graze less at night, dog more restless
+- [ ] **Water sources** — sheep need water periodically; mood drops if dry too long
+- [ ] **Weather** — wind biases sheep drift; rain boosts grass regrowth
+- [ ] **Named dog** — dog gets a name; trust persists across sessions (localStorage)
+- [ ] **New command at high trust** — Ġema (gather entire flock) unlocked at trust ≥ 80
+- [ ] **Poems via landmarks** — unlock at specific explored map locations, not just stillness
+- [ ] **Journal** — discovery log: named locations, found sheep, unlocked poems (localStorage)
+- [ ] **Shepherd stamina** — running drains a bar; walking/standing restores it
+- [ ] **Flock count HUD** — live count visible in top-left corner
 - [ ] Second herding dog
-- [ ] Remaining commands: Xellug / Lemin / Bravu! (with praise feedback)
-- [ ] Voice input — SpeechRecognition API, no locale restriction (user's device language used, Maltese phoneme matching done via keyword detection not locale lock), graceful button fallback
-- [ ] Lost sheep: discoverable lambs that grow the flock on reunion
-- [ ] Predators: fox / bird of prey — dogs can chase away
-- [ ] Cliff edges: sheep may tumble but are recoverable
-- [ ] Procedural terrain chunking (garigue, terraced fields, cliff faces, sea horizon)
-- [ ] Real poem narration audio (MP3/OGG, same JSON schema)
-- [ ] Poetry library in pause menu (replay any unlocked poem)
-- [ ] Full UI polish: earthy palette, handwritten-style Maltese font accents
-- [ ] 8–12 poems at launch with easy JSON drop-in for new recordings
+- [ ] Predators: fox / bird of prey — dog can chase away
+- [ ] Real poem narration audio (MP3/OGG)
+- [ ] Poetry library in pause menu (replay unlocked poems)
 
 ---
 
@@ -43,30 +53,27 @@ Goal: Full feature set, two dogs, all commands, predators, real poems.
 
 Goal: Beautiful, installable, culturally complete.
 
-- [ ] **Isometric view** — switch from flat top-down to true isometric projection (Phaser tilemaps or custom isometric transform). Sheep, shepherd, dog sprites all need isometric art. Significant visual uplift.
-- [ ] Day-night cycle with dynamic lighting
-- [ ] Light seasonal variations (spring wildflowers, dry summer, autumn haze)
+- [ ] Seasonal variations (spring wildflowers, dry summer, autumn haze)
 - [ ] Cosmetic options: shepherd hat variants, flock wool tints
 - [ ] PWA manifest + service worker (offline play, install to home screen)
-- [ ] Accessibility: colour-blind modes, text-only poetry mode, sound level toggles
-- [ ] Donation / support link (itch.io page)
-- [ ] More poems added post-launch via JSON (no app update needed)
+- [ ] Accessibility: colour-blind modes, text-only poetry mode, sound toggles
+- [ ] 8–12 poems at launch, easy JSON drop-in for new recordings post-launch
+- [ ] Donation / support link (itch.io)
 
 ---
 
-## Key Constants (tunable in `src/config/constants.ts`)
+## Key Constants (src/config/constants.ts)
 
-| Constant | Phase 1 Value |
+| Constant | Value |
 |---|---|
 | `FLOCK_SIZE_INITIAL` | 200 |
-| `FLOCK_SIZE_MAX` | 1000 | _(scale up after Phase 1 performance validated)_ |
-| `BOID_COHESION` | 0.3 |
-| `BOID_SEPARATION` | 1.5 |
-| `BOID_ALIGNMENT` | 0.7 |
-| `BOID_DOG_REPULSION` | 2.0 |
-| `DOG_REPULSION_RADIUS` | 150 |
-| `SHEPHERD_SPEED` | 200 |
-| `DOG_SPEED` | 350 |
-| `SHEEP_SPEED` | 120 |
-| `LOD_NEAR_THRESHOLD` | 300 |
-| `POETRY_STILL_TRIGGER_MS` | 10000 |
+| `WORLD_WIDTH / HEIGHT` | 36 000 × 36 000 px |
+| `DOG_TRUST_INITIAL` | 30 |
+| `TREAT_SPAWN_COUNT` | 5 |
+| `GUIDE_DURATION_MS` | 8 000 |
+| `GUIDE_COOLDOWN_MS` | 30 000 |
+| `EJJA_DURATION_MIN/MAX_MS` | 8 000 / 45 000 |
+| `IEQAF_DURATION_MIN_MS` | 10 000 |
+| `DOG_STOP_MAX_MS` | 60 000 |
+| `GRASS_REGROW_RATE_PER_SEC` | 0.05 (0→3 in ~60s) |
+| `STRAY_TIME_THRESHOLD` | 20s |
