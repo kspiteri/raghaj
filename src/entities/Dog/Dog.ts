@@ -158,8 +158,6 @@ export default class Dog extends BaseEntity {
                 this.ejjaStrayTimer = 0;
                 break;
             case 'EJJA':
-                this.targetX    = shepherdX;
-                this.targetY    = shepherdY;
                 this.ejjaActive = true;
                 this.ejjaTimer  = Phaser.Math.Linear(
                     EJJA_DURATION_MIN_MS, EJJA_DURATION_MAX_MS, this.trust / 100,

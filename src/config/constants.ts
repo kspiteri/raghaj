@@ -94,7 +94,7 @@ export const IEQAF_DURATION_MIN_MS  = 10_000;      // at trust=0 (max = DOG_STOP
 // Treats
 export const TREAT_SPAWN_COUNT    = 5;
 export const TREAT_COLLECT_RADIUS = 20;          // px — shepherd picks up
-export const TREAT_GIVE_RADIUS    = 30;          // px — shepherd gives to dog
+export const TREAT_GIVE_RADIUS    = 100;         // px — shepherd gives to dog
 export const TREAT_MAX_CARRY      = 5;
 export const TREAT_RESPAWN_MS     = 300_000;     // 5 min
 export const TREAT_TRUST_BONUS    = 15;

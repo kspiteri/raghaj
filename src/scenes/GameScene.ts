@@ -94,7 +94,7 @@ export default class GameScene extends Phaser.Scene {
         this.dog.update(delta);
 
         this.grassSystem.update(delta);
-        this.treatSystem.update(delta, this.shepherd, this.dog);
+        this.treatSystem.update(delta, this.shepherd);
 
         // Sync guided sheep state
         const guideActive = this.shepherd.guideActive;

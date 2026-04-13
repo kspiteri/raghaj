@@ -1,12 +1,10 @@
 import Phaser from 'phaser';
 import Shepherd from '../entities/Shepherd';
-import Dog from '../entities/Dog/Dog';
 import { isoProject } from '../utils/iso';
 import {
     WORLD_WIDTH,
     WORLD_HEIGHT,
     TREAT_COLLECT_RADIUS,
-    TREAT_GIVE_RADIUS,
     TREAT_MAX_CARRY,
     TREAT_RESPAWN_MS,
 } from '../config/constants';
@@ -43,7 +41,7 @@ export default class TreatSystem {
         }
     }
 
-    update(delta: number, shepherd: Shepherd, dog: Dog): void {
+    update(delta: number, shepherd: Shepherd): void {
         for (const t of this.treats) {
             if (!t.active) {
                 t.respawnTimer -= delta;
@@ -73,20 +71,6 @@ export default class TreatSystem {
             }
         }
 
-        // Shepherd gives treat to dog by walking toward it
-        if (shepherd.treatCount > 0 && shepherd.isMoving) {
-            const dist = Math.hypot(shepherd.x - dog.x, shepherd.y - dog.y);
-            if (dist < TREAT_GIVE_RADIUS) {
-                // Check shepherd is moving toward dog (dot product > 0)
-                const dogDirX = dog.x - shepherd.x;
-                const dogDirY = dog.y - shepherd.y;
-                const dot = shepherd.velocity.x * dogDirX + shepherd.velocity.y * dogDirY;
-                if (dot > 0) {
-                    shepherd.treatCount--;
-                    dog.giveTreat();
-                }
-            }
-        }
     }
 
     private randomNearPosition(cx: number, cy: number): { x: number; y: number } {
