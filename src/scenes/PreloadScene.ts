@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import shepUrl  from '../assets/sprites/shep.png';
 import dogUrl   from '../assets/sprites/dog.png';
 import sheepUrl from '../assets/sprites/sheep.png';
-import goatUrl  from '../assets/sprites/goat.png';
+import goatUrl      from '../assets/sprites/goat.png';
+import heightmapUrl from '../assets/heightmap.png';
 
 const FRAME_W = 292;
 const FRAME_H = 392;
@@ -21,10 +22,10 @@ export default class PreloadScene extends Phaser.Scene {
         // Graceful fallback if heightmap is missing — flat terrain is used
         this.load.on('loaderror', (file: Phaser.Loader.File) => {
             if (file.key === 'heightmap') {
-                console.warn('heightmap.png not found in public/assets/ — using flat terrain');
+                console.warn('heightmap.png not found — using flat terrain');
             }
         });
-        this.load.image('heightmap', `${import.meta.env.BASE_URL}assets/heightmap.png`);
+        this.load.image('heightmap', heightmapUrl);
     }
 
     create(): void {
