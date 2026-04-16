@@ -10,6 +10,11 @@ export const BOID_DOG_REPULSION = 2.0;
 export const BOID_NEIGHBOR_RADIUS = 80;  // px — how far a sheep looks for neighbours
 export const DOG_REPULSION_RADIUS = 150; // px
 
+// Small-flock merging — isolated groups of ≤N sheep drift toward larger nearby clusters
+export const SMALL_FLOCK_THRESHOLD  = 5;    // local-neighbour count below which pull activates
+export const SMALL_FLOCK_SEEK_RADIUS = 500; // px — long-range scan radius
+export const SMALL_FLOCK_COHESION    = 0.025; // attraction strength (weaker than normal cohesion)
+
 // Sheep speeds (px/s)
 export const SHEEP_GRAZE_SPEED = 22;     // calm wandering
 export const SHEEP_FLEE_SPEED = 120;     // when dog is pushing

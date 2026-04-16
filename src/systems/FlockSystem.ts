@@ -27,6 +27,9 @@ import {
     MOOD_LOW_SEP_BONUS,
     GUIDE_SPREAD_RADIUS,
     FLOCK_SIZE_INITIAL,
+    SMALL_FLOCK_THRESHOLD,
+    SMALL_FLOCK_SEEK_RADIUS,
+    SMALL_FLOCK_COHESION,
 } from '../config/constants';
 
 interface WallRect { x: number; y: number; w: number; h: number; }
@@ -172,6 +175,27 @@ export default class FlockSystem {
                 steerY += ((cohY / neighbors) - s.y) * BOID_COHESION * cohesionScale * cohFactor;
                 steerX += (aliX / neighbors) * BOID_ALIGNMENT;
                 steerY += (aliY / neighbors) * BOID_ALIGNMENT;
+            }
+
+            // Small-flock merge: if barely any local neighbours, look further for a
+            // larger cluster and drift toward it.
+            if (neighbors < SMALL_FLOCK_THRESHOLD) {
+                let lrX = 0, lrY = 0, lrCount = 0;
+                for (let j = 0; j < count; j++) {
+                    if (i === j || sheep[j].isWild) continue;
+                    const dx = sheep[j].x - s.x;
+                    const dy = sheep[j].y - s.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist > BOID_NEIGHBOR_RADIUS && dist < SMALL_FLOCK_SEEK_RADIUS) {
+                        lrX += sheep[j].x;
+                        lrY += sheep[j].y;
+                        lrCount++;
+                    }
+                }
+                if (lrCount >= SMALL_FLOCK_THRESHOLD) {
+                    steerX += ((lrX / lrCount) - s.x) * SMALL_FLOCK_COHESION;
+                    steerY += ((lrY / lrCount) - s.y) * SMALL_FLOCK_COHESION;
+                }
             }
 
             steerX += sepX * BOID_SEPARATION * separationScale;
