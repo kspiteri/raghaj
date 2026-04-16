@@ -8,6 +8,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    minify: true
+    minify: true,
+    assetsInlineLimit: 0
   }
 })

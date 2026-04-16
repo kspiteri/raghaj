@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import Shepherd from '../entities/Shepherd';
 import { isoProject } from '../utils/iso';
 import {

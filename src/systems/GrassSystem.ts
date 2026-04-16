@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { SheepData } from '../entities/Sheep/Sheep';
 import {
     TILE_SIZE,
@@ -176,7 +176,7 @@ export default class GrassSystem {
                 if (!tint) continue;
 
                 this.overlay.fillStyle(tint.color, tint.alpha);
-                this.overlay.fillPoints(tileCorners(c, r), true);
+                this.overlay.fillPoints(tileCorners(c, r) as Phaser.Math.Vector2[], true);
             }
         }
     }

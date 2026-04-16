@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import shepUrl  from '../assets/sprites/shep.png';
 import dogUrl   from '../assets/sprites/dog.png';
 import sheepUrl from '../assets/sprites/sheep.png';

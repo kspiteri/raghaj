@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 export default abstract class BaseEntity {
     protected scene: Phaser.Scene;

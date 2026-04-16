@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import CommandSystem, { COMMANDS } from '../systems/CommandSystem';
 import Shepherd from '../entities/Shepherd';
 import Dog from '../entities/Dog/Dog';

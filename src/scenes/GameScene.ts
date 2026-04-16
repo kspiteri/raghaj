@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import Shepherd from '../entities/Shepherd';
 import Dog from '../entities/Dog/Dog';
 import Flock from '../entities/Sheep/Flock';
@@ -9,7 +9,7 @@ import PoetrySystem from '../systems/PoetrySystem';
 import SaveSystem from '../systems/SaveSystem';
 import GrassSystem from '../systems/GrassSystem';
 import TreatSystem from '../systems/TreatSystem';
-import VignettePipeline from '../pipelines/VignettePipeline';
+import { WarmVignetteController } from '../filters/WarmVignetteFilter';
 import { WORLD_WIDTH, WORLD_HEIGHT, TILE_SIZE, GUIDE_RADIUS, MOOD_UPDATE_INTERVAL_MS, WILD_SHEEP_COUNT, WILD_MIN_DIST, WILD_JOIN_RADIUS } from '../config/constants';
 import { Poem } from '../systems/PoetrySystem';
 
@@ -78,11 +78,8 @@ export default class GameScene extends Phaser.Scene {
             dog:           this.dog,
         });
 
-        // Register + apply vignette PostFX (WebGL only)
-        if (this.game.renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer) {
-            this.game.renderer.pipelines.addPostPipeline('VignettePipeline', VignettePipeline);
-            this.cameras.main.setPostPipeline(VignettePipeline);
-        }
+        // Warm colour grade + radial edge blur via custom filter (v4)
+        this.cameras.main.filters.external.add(new WarmVignetteController(this.cameras.main));
     }
 
     private spawnWildSheep(spawnX: number, spawnY: number): void {

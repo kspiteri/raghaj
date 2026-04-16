@@ -1,7 +1,8 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
-// Screen-space post-process applied to the GameScene camera.
-// Warm colour grade + radial edge blur (no heavy darkening).
+// Screen-space post-process: warm colour grade + radial edge blur + subtle edge fade.
+// Ported from the v3 PostFXPipeline to v4's Filter system.
+// The shader uses outTexCoord symmetrically around (0.5, 0.5) so v4's Y-flip is a non-issue.
 const FRAG = `
 #ifdef GL_ES
 precision mediump float;
@@ -41,7 +42,7 @@ void main () {
     // Mild contrast lift
     col.rgb = clamp((col.rgb - 0.5) * 1.08 + 0.5, 0.0, 1.0);
 
-    // Very gentle edge fade (10% max) just to soften the frame — no heavy darkening
+    // Very gentle edge fade (10% max darkening)
     float fade = 1.0 - smoothstep(0.35, 0.50, dist) * 0.10;
     col.rgb *= fade;
 
@@ -49,8 +50,16 @@ void main () {
 }
 `;
 
-export default class VignettePipeline extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline {
-    constructor(game: Phaser.Game) {
-        super({ game, name: 'VignettePipeline', fragShader: FRAG });
+export const WARM_VIGNETTE_NODE = 'WarmVignetteRenderNode';
+
+export class WarmVignetteRenderNode extends Phaser.Renderer.WebGL.RenderNodes.BaseFilterShader {
+    constructor(manager: Phaser.Renderer.WebGL.RenderNodes.RenderNodeManager) {
+        super(WARM_VIGNETTE_NODE, manager, undefined, FRAG);
+    }
+}
+
+export class WarmVignetteController extends Phaser.Filters.Controller {
+    constructor(camera: Phaser.Cameras.Scene2D.Camera) {
+        super(camera, WARM_VIGNETTE_NODE);
     }
 }

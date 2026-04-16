@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import BaseEntity from './BaseEntity';
 import { SHEPHERD_RUN_SPEED, WORLD_WIDTH, WORLD_HEIGHT, GUIDE_DURATION_MS, GUIDE_COOLDOWN_MS } from '../config/constants';
 import { isoProject } from '../utils/iso';

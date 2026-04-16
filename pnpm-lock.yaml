@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   phaser:
-    specifier: ^3.90.0
-    version: 3.90.0
+    specifier: ^4.0.0
+    version: 4.0.0
 
 devDependencies:
   typescript:
@@ -362,8 +362,8 @@ packages:
     hasBin: true
     dev: true
 
-  /phaser@3.90.0:
-    resolution: {integrity: sha512-/cziz/5ZIn02uDkC9RzN8VF9x3Gs3XdFFf9nkiMEQT3p7hQlWuyjy4QWosU802qqno2YSLn2BfqwOKLv/sSVfQ==}
+  /phaser@4.0.0:
+    resolution: {integrity: sha512-f9oYpu3/UymB5JJDZRqOsNQm5FkMMC7u8eL8yQuqGAa54wTbgE2QbTOn70vgvlOVuYeQcw2mOQ52PpJHBSBkfQ==}
     dependencies:
       eventemitter3: 5.0.4
     dev: false

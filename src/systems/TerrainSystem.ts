@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { TILE_SIZE, TILE_ELEV_STEP, TILE_ELEV_MAX, WORLD_WIDTH, WORLD_HEIGHT } from '../config/constants';
 
 // ── Elevation colors (top face), index = elevation level 0..7 ────────────────

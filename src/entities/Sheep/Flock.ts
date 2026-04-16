@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { SheepData } from './Sheep';
 import { FLOCK_SIZE_INITIAL } from '../../config/constants';
 import { isoProject } from '../../utils/iso';

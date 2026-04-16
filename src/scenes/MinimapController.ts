@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 const FONT = "'Lora', Georgia, serif";
 const MAP_MARGIN = 10;

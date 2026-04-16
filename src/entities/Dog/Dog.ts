@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import BaseEntity from '../BaseEntity';
 import { DogState, DogCommand } from './types';
 import { nextDogState } from './DogStates';

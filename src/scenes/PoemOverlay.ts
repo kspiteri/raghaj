@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { Poem } from '../systems/PoetrySystem';
 import { POETRY_FADE_DURATION } from '../config/constants';
 

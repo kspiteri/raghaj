@@ -1,10 +1,11 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import PreloadScene from './scenes/PreloadScene';
 import GameScene from './scenes/GameScene';
 import UIScene from './scenes/UIScene';
 import { TARGET_FPS } from './config/constants';
+import { WarmVignetteRenderNode, WARM_VIGNETTE_NODE } from './filters/WarmVignetteFilter';
 
-// `resolution` is valid at runtime but missing from Phaser 3.90 types
+// `resolution` is valid at runtime but missing from Phaser 4.0 types
 type GameConfigWithResolution = Phaser.Types.Core.GameConfig & { resolution?: number };
 
 const config: GameConfigWithResolution = {
@@ -22,6 +23,12 @@ const config: GameConfigWithResolution = {
     fps: {
         target: TARGET_FPS,
         forceSetTimeOut: false,
+    },
+    render: {
+        renderNodes: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            [WARM_VIGNETTE_NODE]: WarmVignetteRenderNode as any,
+        },
     },
     scene: [PreloadScene, GameScene, UIScene],
 };

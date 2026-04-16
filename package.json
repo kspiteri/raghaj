@@ -8,11 +8,16 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["game", "phaser", "malta", "herding"],
+  "keywords": [
+    "game",
+    "phaser",
+    "malta",
+    "herding"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "phaser": "^3.90.0"
+    "phaser": "^4.0.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

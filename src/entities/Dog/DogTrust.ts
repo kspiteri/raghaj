@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { isoProject } from '../../utils/iso';
 import {
     DOG_TRUST_INITIAL, TRUST_LOW_THRESHOLD, TRUST_LOW_IGNORE_CHANCE,
