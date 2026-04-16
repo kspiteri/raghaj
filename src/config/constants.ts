@@ -56,7 +56,7 @@ export const TILE_ELEV_MAX  = 8;   // discrete elevation levels (0 = coast, 7 = 
 // Grass
 export const GRASS_INITIAL_LEVEL       = 3;
 export const GRASS_REGROW_RATE_PER_SEC = 0.05;   // levels/sec — 0→3 in ~60s
-export const GRASS_EAT_AMOUNT          = 0.08;   // deducted per nearly-still sheep per second
+export const GRASS_EAT_AMOUNT          = 0.05;   // levels/sec per sheep (dt-scaled) — 1 sheep eats tile bare in ~60s
 export const SHEEP_BARE_SPEED_FACTOR   = 0.6;
 export const BOID_BARE_REPULSION       = 0.4;
 export const GRAZE_ZONE_SIZE           = 20;     // tiles/side for poem unlock zones
@@ -110,7 +110,7 @@ export const MOOD_UPDATE_INTERVAL_MS   = 500;
 
 // Wild sheep
 export const WILD_SHEEP_COUNT  = 30;   // scattered across world at startup
-export const WILD_JOIN_RADIUS  = 250;  // px — shepherd proximity to trigger join
+export const WILD_JOIN_RADIUS  = 400;  // px — shepherd proximity to trigger join
 export const WILD_MIN_DIST     = 600;  // px — min distance from spawn for initial placement
 
 // Zoom

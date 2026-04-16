@@ -26,6 +26,7 @@ import {
     MOOD_HIGH_COHESION_BONUS,
     MOOD_LOW_SEP_BONUS,
     GUIDE_SPREAD_RADIUS,
+    FLOCK_SIZE_INITIAL,
 } from '../config/constants';
 
 interface WallRect { x: number; y: number; w: number; h: number; }
@@ -47,6 +48,10 @@ export default class FlockSystem {
         const mood = flockMood ?? 0.5;
         const cohesionScale   = mood > MOOD_HIGH_THRESHOLD ? MOOD_HIGH_COHESION_BONUS : 1.0;
         const separationScale = mood < MOOD_LOW_THRESHOLD  ? MOOD_LOW_SEP_BONUS : 1.0;
+
+        // Larger flocks spread out — separation radius scales with sqrt(count) so
+        // the occupied circle area grows proportionally with flock size.
+        const flockScale = Math.sqrt(count / FLOCK_SIZE_INITIAL);
 
         for (let i = 0; i < count; i++) {
             const s = sheep[i];
@@ -94,7 +99,8 @@ export default class FlockSystem {
 
             // ── Wild sheep: wander + dog repulsion only, no boids ────────────
             if (s.isWild) {
-                s.wanderAngle += (Math.random() - 0.5) * WANDER_TURN_RATE * 2 * dt;
+                // Wild sheep turn slowly — long straight legs stop them looking stuck
+                s.wanderAngle += (Math.random() - 0.5) * WANDER_TURN_RATE * 0.25 * dt;
                 s.vx += Math.cos(s.wanderAngle) * BOID_WANDER_STRENGTH;
                 s.vy += Math.sin(s.wanderAngle) * BOID_WANDER_STRENGTH;
 
@@ -119,9 +125,18 @@ export default class FlockSystem {
             }
 
             // ── Boids ────────────────────────────────────────────────────────
+
+            // Dog repulsion computed first — used to scale cohesion below.
+            const rep = dog.getRepulsionVector(s.x, s.y);
+            const dogInfluence = Math.hypot(rep.x, rep.y);
+
+            // Calm flock grazes loosely; threatened flock tightens up.
+            // cohFactor: 0.15 when no dog → flock spreads to graze; 1.0 when fleeing.
+            const cohFactor = dogInfluence > 0.1 ? 1.0 : 0.15;
+
             const currentSpeed = Math.hypot(s.vx, s.vy);
             const grazing = currentSpeed < SHEEP_GRAZE_SPEED * 0.5;
-            const sepRadius = BOID_NEIGHBOR_RADIUS * (grazing ? 0.95 : 0.35);
+            const sepRadius = BOID_NEIGHBOR_RADIUS * (grazing ? 0.95 : 0.35) * flockScale;
             const sepForceScale = grazing ? 3.0 : 1.0;
 
             let cohX = 0, cohY = 0;
@@ -153,8 +168,8 @@ export default class FlockSystem {
             let steerY = 0;
 
             if (neighbors > 0) {
-                steerX += ((cohX / neighbors) - s.x) * BOID_COHESION * cohesionScale;
-                steerY += ((cohY / neighbors) - s.y) * BOID_COHESION * cohesionScale;
+                steerX += ((cohX / neighbors) - s.x) * BOID_COHESION * cohesionScale * cohFactor;
+                steerY += ((cohY / neighbors) - s.y) * BOID_COHESION * cohesionScale * cohFactor;
                 steerX += (aliX / neighbors) * BOID_ALIGNMENT;
                 steerY += (aliY / neighbors) * BOID_ALIGNMENT;
             }
@@ -162,9 +177,6 @@ export default class FlockSystem {
             steerX += sepX * BOID_SEPARATION * separationScale;
             steerY += sepY * BOID_SEPARATION * separationScale;
 
-            // Dog repulsion
-            const rep = dog.getRepulsionVector(s.x, s.y);
-            const dogInfluence = Math.hypot(rep.x, rep.y);
             steerX += rep.x * BOID_DOG_REPULSION;
             steerY += rep.y * BOID_DOG_REPULSION;
 
@@ -229,11 +241,12 @@ export default class FlockSystem {
             s.x += s.vx * dt;
             s.y += s.vy * dt;
 
-            // Grass eating (when nearly still)
-            if (grassSystem && speed < SHEEP_GRAZE_SPEED * 0.3) {
+            // Grass eating — every sheep eats continuously (dt-scaled), no speed gate.
+            // Tiles deplete naturally; tileRepulsion then drives the flock to fresh grass.
+            if (grassSystem) {
                 const col = Math.floor(s.x / TILE_SIZE);
                 const row = Math.floor(s.y / TILE_SIZE);
-                grassSystem.eatGrass(col, row);
+                grassSystem.eatGrass(col, row, dt);
             }
 
             // Stray timer

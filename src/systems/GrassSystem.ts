@@ -80,12 +80,12 @@ export default class GrassSystem {
         return this.getGrass(Math.floor(wx / TILE_SIZE), Math.floor(wy / TILE_SIZE));
     }
 
-    /** Called by FlockSystem when a sheep is nearly stationary on a tile. */
-    eatGrass(col: number, row: number): void {
+    /** Called by FlockSystem each frame per sheep on this tile. Amount is dt-scaled (levels/sec). */
+    eatGrass(col: number, row: number, dt: number): void {
         if (col < 0 || row < 0 || col >= this.cols || row >= this.rows) return;
         const idx = col * this.rows + row;
         if (!this.isLand[idx]) return;
-        this.accum[idx] = Math.max(0, this.accum[idx] - GRASS_EAT_AMOUNT);
+        this.accum[idx] = Math.max(0, this.accum[idx] - GRASS_EAT_AMOUNT * dt);
         const newLevel = Math.floor(this.accum[idx]);
         if (newLevel !== this.grass[idx]) {
             this.grass[idx] = newLevel;
