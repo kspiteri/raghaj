@@ -36,30 +36,39 @@ A new `SettlementSystem` owns all placement, visuals, proximity detection, and q
 ### Task 1 — Data & constants
 
 **`data/settlements.json`**
+
+Anchors derived from real GPS coordinates mapped onto the heightmap bounds (N 36.09°, S 35.80°, W 14.18°, E 14.58°):
+
+| Settlement | Lat / Lon | fx | fy |
+|---|---|---|---|
+| Valletta | 35.8997°N, 14.5147°E | 0.837 | 0.657 |
+| Mdina | 35.8872°N, 14.4038°E | 0.560 | 0.699 |
+| Marsaxlokk | 35.8413°N, 14.5431°E | 0.908 | 0.857 |
+
 ```json
 [
   {
-    "id": "hal-gorg", "name": "Ħal Ġorġ", "type": "village",
-    "anchor": { "fx": 0.26, "fy": 0.31 },
+    "id": "valletta", "name": "Valletta", "type": "village",
+    "anchor": { "fx": 0.837, "fy": 0.657 },
     "quests": [
-      { "id": "hg-letter", "type": "deliver", "to": "in-naxxar",
-        "label": "Deliver a letter to In-Naxxar", "reward": { "treats": 3 } }
+      { "id": "val-letter", "type": "deliver", "to": "mdina",
+        "label": "Deliver a letter to Mdina", "reward": { "treats": 3 } }
     ]
   },
   {
-    "id": "in-naxxar", "name": "In-Naxxar", "type": "village",
-    "anchor": { "fx": 0.62, "fy": 0.44 },
+    "id": "mdina", "name": "Mdina", "type": "village",
+    "anchor": { "fx": 0.560, "fy": 0.699 },
     "quests": [
-      { "id": "nax-poem", "type": "visit", "label": "Rest here a while",
+      { "id": "mdi-poem", "type": "visit", "label": "Rest within the Silent City",
         "reward": { "poemTrigger": true } }
     ]
   },
   {
-    "id": "haz-zebbug", "name": "Ħaż-Żebbuġ", "type": "village",
-    "anchor": { "fx": 0.38, "fy": 0.70 },
+    "id": "marsaxlokk", "name": "Marsaxlokk", "type": "village",
+    "anchor": { "fx": 0.908, "fy": 0.857 },
     "quests": [
-      { "id": "zeb-letter", "type": "deliver", "to": "hal-gorg",
-        "label": "Carry herbs back to Ħal Ġorġ", "reward": { "treats": 2 } }
+      { "id": "mxl-letter", "type": "deliver", "to": "valletta",
+        "label": "Carry fresh catch to Valletta", "reward": { "treats": 2 } }
     ]
   }
 ]
@@ -125,7 +134,7 @@ interface ActiveQuest {
 
 **`resolvePositions(terrain, save)`**
 1. Load saved random positions from `save.getSettlementPositions()`
-2. Anchor settlements: `terrain.findLandNear(def.anchor.fx * WORLD_WIDTH, def.anchor.fy * WORLD_HEIGHT)`
+2. For anchor settlements: `terrain.findLandNear(def.anchor.fx * WORLD_WIDTH, def.anchor.fy * WORLD_HEIGHT)` — always re-snap (deterministic). Approximate world px: Valletta ~(30 132, 23 652), Mdina ~(20 160, 25 164), Marsaxlokk ~(32 688, 30 852)
 3. Random slots: use saved position if exists, else generate with `terrain.findRandomInteriorPosition(2)` respecting `SETTLEMENT_MIN_DIST` (pattern mirrors `spawnWildSheep` in `GameScene.ts:87-98`)
 4. Save newly generated random positions back to localStorage
 
