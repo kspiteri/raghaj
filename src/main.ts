@@ -24,6 +24,9 @@ const config: GameConfigWithResolution = {
         target: TARGET_FPS,
         forceSetTimeOut: false,
     },
+    input: {
+        activePointers: 2, // enable multi-touch (needed for pinch-to-zoom)
+    },
     render: {
         renderNodes: {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
