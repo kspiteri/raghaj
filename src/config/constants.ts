@@ -68,8 +68,8 @@ export const STRAY_WANDER_MULTIPLIER = 2.5;
 // Guide ability
 export const GUIDE_DURATION_MS    = 8_000;
 export const GUIDE_COOLDOWN_MS    = 30_000;
-export const GUIDE_RADIUS         = 300;           // px — sheep within this follow shepherd
-export const GUIDE_SPREAD_RADIUS  = 180;           // px — guided sheep orbit shepherd at this distance
+export const GUIDE_RADIUS         = 700;           // px — sheep within this follow shepherd
+export const GUIDE_SPREAD_RADIUS  = 300;           // px — guided sheep orbit shepherd at this distance
 
 // Dog trust
 export const DOG_TRUST_INITIAL         = 30;

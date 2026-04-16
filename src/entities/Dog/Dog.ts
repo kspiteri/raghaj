@@ -282,6 +282,18 @@ export default class Dog extends BaseEntity {
         this.state = DogState.HERDING;
     }
 
+    // ── Guide assist ─────────────────────────────────────────────────────────
+
+    /** Called each frame while Mexxi is active and shepherd is moving.
+     *  Positions the dog ahead of the shepherd in the movement direction so
+     *  its repulsion funnels guided sheep forward. */
+    assistGuide(tx: number, ty: number): void {
+        if (this.state === DogState.STOPPED) return;
+        this.targetX = tx;
+        this.targetY = ty;
+        this.state   = DogState.HERDING;
+    }
+
     // ── Repulsion ────────────────────────────────────────────────────────────
 
     getRepulsionVector(sx: number, sy: number): { x: number; y: number } {

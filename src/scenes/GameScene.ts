@@ -27,8 +27,9 @@ export default class GameScene extends Phaser.Scene {
     private grassSystem!: GrassSystem;
     private treatSystem!: TreatSystem;
 
-    private flockMood   = 0.5;
-    private moodTimer   = 0;
+    private flockMood      = 0.5;
+    private moodTimer      = 0;
+    private guideWasActive = false;
 
     constructor() {
         super({ key: 'GameScene' });
@@ -101,19 +102,40 @@ export default class GameScene extends Phaser.Scene {
     }
 
     update(_time: number, delta: number): void {
+        const guideActive = this.shepherd.guideActive;
+
         this.shepherd.update(delta);
         this.dog.tickAutonomous(this.flock.sheep, this.shepherd.x, this.shepherd.y, delta);
+
+        // During Mexxi, point dog ahead of shepherd to funnel guided sheep forward
+        if (guideActive && this.shepherd.isMoving) {
+            const vel = this.shepherd.velocity;
+            const speed = Math.hypot(vel.x, vel.y);
+            if (speed > 0) {
+                this.dog.assistGuide(
+                    this.shepherd.x + (vel.x / speed) * 200,
+                    this.shepherd.y + (vel.y / speed) * 200,
+                );
+            }
+        }
+
         this.dog.update(delta);
 
         this.grassSystem.update(delta);
         this.treatSystem.update(delta, this.shepherd);
 
-        // Sync guided sheep state
-        const guideActive = this.shepherd.guideActive;
-        for (const s of this.flock.sheep) {
-            s.isGuided = guideActive &&
-                Math.hypot(s.x - this.shepherd.x, s.y - this.shepherd.y) < GUIDE_RADIUS;
+        // Sync guided sheep state — lock in on activation, clear on expiry
+        if (guideActive && !this.guideWasActive) {
+            // Guide just fired — capture all sheep within radius
+            for (const s of this.flock.sheep) {
+                if (Math.hypot(s.x - this.shepherd.x, s.y - this.shepherd.y) < GUIDE_RADIUS) {
+                    s.isGuided = true;
+                }
+            }
+        } else if (!guideActive && this.guideWasActive) {
+            for (const s of this.flock.sheep) s.isGuided = false;
         }
+        this.guideWasActive = guideActive;
 
         // Wild sheep join when shepherd gets close
         for (const s of this.flock.sheep) {
