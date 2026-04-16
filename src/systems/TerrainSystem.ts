@@ -307,7 +307,9 @@ export default class TerrainSystem {
         const maxTex: number = renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer
             ? (renderer.gl.getParameter(renderer.gl.MAX_TEXTURE_SIZE) as number)
             : 4096;
-        const CHUNK_PX   = Math.min(maxTex, 4096);
+        // BLEED is subtracted from CHUNK_PX so canvas + bleed never exceeds maxTex
+        const BLEED      = 2; // canvas px — overlap adjacent chunks to eliminate seam gaps
+        const CHUNK_PX   = Math.min(maxTex, 4096) - BLEED;
         const numCX      = Math.ceil(cw / CHUNK_PX);
         const numCY      = Math.ceil(ch / CHUNK_PX);
 
@@ -323,8 +325,8 @@ export default class TerrainSystem {
             ctxs[ci]     = [];
             for (let ri = 0; ri < numCY; ri++) {
                 const c   = document.createElement('canvas');
-                c.width   = Math.min(CHUNK_PX, cw - ci * CHUNK_PX);
-                c.height  = Math.min(CHUNK_PX, ch - ri * CHUNK_PX);
+                c.width   = Math.min(CHUNK_PX, cw - ci * CHUNK_PX) + BLEED;
+                c.height  = Math.min(CHUNK_PX, ch - ri * CHUNK_PX) + BLEED;
                 const ctx = c.getContext('2d')!;
                 ctx.fillStyle = SEA_COLOR;
                 ctx.fillRect(0, 0, c.width, c.height);
