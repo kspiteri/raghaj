@@ -3,7 +3,7 @@
     "id": "valletta",
     "name": "Valletta",
     "type": "village",
-    "anchor": { "fx": 0.759, "fy": 0.544 },
+    "anchor": { "fx": 0.800, "fy": 0.635 },
     "quests": [
       {
         "id": "val-letter",
@@ -18,7 +18,7 @@
     "id": "mdina",
     "name": "Mdina",
     "type": "village",
-    "anchor": { "fx": 0.601, "fy": 0.510 },
+    "anchor": { "fx": 0.550, "fy": 0.650 },
     "quests": [
       {
         "id": "mdi-poem",
@@ -32,7 +32,7 @@
     "id": "marsaxlokk",
     "name": "Marsaxlokk",
     "type": "village",
-    "anchor": { "fx": 0.790, "fy": 0.703 },
+    "anchor": { "fx": 0.875, "fy": 0.810 },
     "quests": [
       {
         "id": "mxl-letter",
@@ -45,7 +45,7 @@
   },
   {
     "id": "farm-1",
-    "name": "Razzett",
+    "name": "Razzett tal-Baqar",
     "type": "farmstead",
     "quests": [
       {
@@ -58,7 +58,7 @@
   },
   {
     "id": "farm-2",
-    "name": "Il-Fgura",
+    "name": "Razzett tal-Ħnieżer",
     "type": "farmstead",
     "quests": [
       {
@@ -71,7 +71,7 @@
   },
   {
     "id": "chapel-1",
-    "name": "Kappella",
+    "name": "Knisja",
     "type": "chapel",
     "quests": [
       {
@@ -84,7 +84,7 @@
   },
   {
     "id": "chapel-2",
-    "name": "Għajn Tuffieħa",
+    "name": "Kappella",
     "type": "chapel",
     "quests": [
       {
