@@ -65,7 +65,7 @@ export default class TreatSystem {
                     t.active = false;
                     t.respawnTimer = TREAT_RESPAWN_MS;
                     t.sprite.setVisible(false);
-                    shepherd.treatCount++;
+                    shepherd.addTreats(1);
                     continue;
                 }
             }

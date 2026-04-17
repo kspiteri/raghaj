@@ -1,6 +1,5 @@
 export enum DogState {
     IDLE    = 'IDLE',
-    MOVING  = 'MOVING',
     HERDING = 'HERDING',
     STOPPED = 'STOPPED',  // holds position, auto-reverts to IDLE after DOG_STOP_MAX_MS
 }

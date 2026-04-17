@@ -5,6 +5,7 @@ import {
     SETTLEMENT_INTERACT_RADIUS,
     SETTLEMENT_MIN_DIST,
 } from '../config/constants';
+import { FONT } from '../config/fonts';
 import TerrainSystem from './TerrainSystem';
 import SaveSystem from './SaveSystem';
 import { isoProject } from '../utils/iso';
@@ -214,7 +215,7 @@ export default class SettlementSystem {
         const label = scene.add.text(0, labelY, s.name, {
             fontSize,
             color: '#f5e0c0',
-            fontFamily: "'Lora', Georgia, serif",
+            fontFamily: FONT,
             stroke: '#1a0a00',
             strokeThickness: 3,
         }).setOrigin(0.5, 1);

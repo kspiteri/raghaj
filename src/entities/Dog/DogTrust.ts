@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { isoProject } from '../../utils/iso';
+import { FONT } from '../../config/fonts';
 import {
     DOG_TRUST_INITIAL, TRUST_LOW_THRESHOLD, TRUST_LOW_IGNORE_CHANCE,
     PRAISE_BASE_COOLDOWN_MS, PRAISE_WINDOW_MS, PRAISE_MAX_COMBO,
@@ -11,7 +12,7 @@ export default class DogTrust {
     private praiseTimer    = 0;
     private praiseCombo    = 0;
     private praiseWindow   = 0;
-    private idleDecayTimer = 0;
+    private idleDecayTimer = DOG_IDLE_DECAY_INTERVAL_MS;
 
     constructor(
         private scene: Phaser.Scene,
@@ -55,7 +56,7 @@ export default class DogTrust {
         const pos = this.getDogPos();
         const iso = isoProject(pos.x, pos.y);
         const label = this.scene.add.text(iso.x, iso.y - 60, text, {
-            fontSize: '18px', fontFamily: "'Lora', Georgia, serif",
+            fontSize: '18px', fontFamily: FONT,
         }).setOrigin(0.5, 1).setDepth(99999);
 
         this.scene.tweens.add({

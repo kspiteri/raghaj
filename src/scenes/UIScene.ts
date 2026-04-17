@@ -7,7 +7,9 @@ import { PlacedSettlement, QuestDef, SETTLEMENT_EVENTS, SettlementMarker } from 
 import {
     GUIDE_COOLDOWN_MS, ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
     SHEPHERD_WALK_SPEED, SHEPHERD_RUN_SPEED, TREAT_GIVE_RADIUS,
+    UI_CMD_ROW_H, UI_STATUS_BAR_H,
 } from '../config/constants';
+import { FONT, FONT_DISPLAY } from '../config/fonts';
 import { isoJoystickTransform } from '../utils/iso';
 import MinimapController  from './MinimapController';
 import JoystickController from './JoystickController';
@@ -15,14 +17,11 @@ import PoemOverlay        from './PoemOverlay';
 
 type ControlMode = 'keyboard' | 'touch';
 
-const FONT         = "'Lora', Georgia, serif";
-const FONT_DISPLAY = "'Cinzel', Georgia, serif";
-
 // Keyboard shortcut labels matching COMMANDS order
 const CMD_KEYS = ['1', '2', '3', '4'];
 
-const CMD_ROW_H    = 56;   // command button row height
-const STATUS_BAR_H = 36;   // status + gwida bar height
+const CMD_ROW_H    = UI_CMD_ROW_H;
+const STATUS_BAR_H = UI_STATUS_BAR_H;
 const HUD_H        = CMD_ROW_H + STATUS_BAR_H;
 
 export default class UIScene extends Phaser.Scene {
@@ -569,7 +568,7 @@ export default class UIScene extends Phaser.Scene {
         allItems.push(closeBg, closeLbl);
         closeBg.on('pointerdown', dismiss);
 
-        allItems.forEach(o => (o as Phaser.GameObjects.Components.Alpha).setAlpha(0));
+        allItems.forEach(o => (o as unknown as Phaser.GameObjects.Components.Alpha).setAlpha(0));
         this.tweens.add({ targets: allItems, alpha: 1, duration: 300 });
 
         // Empty sentinel container used only as a handle for the "kill existing prompt" guard

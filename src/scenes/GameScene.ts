@@ -186,6 +186,7 @@ export default class GameScene extends Phaser.Scene {
             this.moodTimer = 0;
             this.flockMood = this.grassSystem.averageGrassUnder(this.flock.sheep);
             this.scene.get('UIScene').events.emit('mood-update', this.flockMood);
+            this.grassSystem.checkGrazingZones(() => this.poetrySystem.triggerPoem());
         }
 
         this.poetrySystem.update(this.shepherd.isMoving, delta);

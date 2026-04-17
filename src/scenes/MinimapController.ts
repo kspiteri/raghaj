@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { WORLD_WIDTH, WORLD_HEIGHT } from '../config/constants';
+import { FONT } from '../config/fonts';
 import type { SettlementMarker } from '../systems/SettlementSystem';
 
-const FONT = "'Lora', Georgia, serif";
 const MAP_MARGIN = 10;
 const TEXTURE_SIZE = 512;
 
