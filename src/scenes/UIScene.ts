@@ -577,4 +577,3 @@ export default class UIScene extends Phaser.Scene {
         this.questPrompt = tweenHandle;
     }
 }
-}
