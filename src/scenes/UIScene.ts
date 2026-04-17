@@ -449,7 +449,7 @@ export default class UIScene extends Phaser.Scene {
             fontFamily: FONT, fontStyle: 'bold',
         }).setOrigin(0.5);
 
-        this.locationBanner = this.add.container(width / 2, 60, [bg, label])
+        this.locationBanner = this.add.container(width / 2, Math.round(this.scale.height * 0.08), [bg, label])
             .setDepth(220).setAlpha(0);
 
         this.tweens.add({
@@ -489,36 +489,35 @@ export default class UIScene extends Phaser.Scene {
         const cx     = width  / 2;
         const cy     = height / 2 - 60;
 
-        const bg = this.add.rectangle(0, 0, panelW, panelH, 0x120c04, 0.92)
-            .setStrokeStyle(1, 0x6a5040, 0.8).setOrigin(0.5);
+        const bg = this.add.rectangle(cx, cy, panelW, panelH, 0x120c04, 0.92)
+            .setStrokeStyle(1, 0x6a5040, 0.8).setOrigin(0.5).setDepth(225);
 
-        const title = this.add.text(0, -panelH / 2 + 14, data.settlement.name, {
+        const title = this.add.text(cx, cy - panelH / 2 + 14, data.settlement.name, {
             fontSize: '13px', color: '#c8a060', fontFamily: FONT, fontStyle: 'bold',
-        }).setOrigin(0.5, 0);
+        }).setOrigin(0.5, 0).setDepth(225);
 
-        const bodyText = this.add.text(0, -panelH / 2 + 34, data.quest.label, {
+        const bodyText = this.add.text(cx, cy - panelH / 2 + 34, data.quest.label, {
             fontSize: '12px', color: '#f5e0c0', fontFamily: FONT,
             wordWrap: { width: panelW - 24 }, align: 'center',
-        }).setOrigin(0.5, 0);
+        }).setOrigin(0.5, 0).setDepth(225);
 
-        const btnY   = panelH / 2 - 20;
+        const btnY   = cy + panelH / 2 - 20;
         const btnW   = 90;
 
-        const acceptBg = this.add.rectangle(-btnW / 2 - 6, btnY, btnW, 28, 0x1a6040, 0.88)
-            .setOrigin(0.5).setInteractive({ useHandCursor: true });
-        const acceptLbl = this.add.text(-btnW / 2 - 6, btnY, 'Accept', {
+        const acceptBg = this.add.rectangle(cx - btnW / 2 - 6, btnY, btnW, 28, 0x1a6040, 0.88)
+            .setOrigin(0.5).setDepth(225).setInteractive({ useHandCursor: true });
+        const acceptLbl = this.add.text(cx - btnW / 2 - 6, btnY, 'Accept', {
             fontSize: '12px', color: '#a0f0b0', fontFamily: FONT_DISPLAY,
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setDepth(225);
 
-        const declineBg = this.add.rectangle(btnW / 2 + 6, btnY, btnW, 28, 0x2a1a10, 0.7)
-            .setOrigin(0.5).setInteractive({ useHandCursor: true });
-        const declineLbl = this.add.text(btnW / 2 + 6, btnY, 'Not now', {
+        const declineBg = this.add.rectangle(cx + btnW / 2 + 6, btnY, btnW, 28, 0x2a1a10, 0.7)
+            .setOrigin(0.5).setDepth(225).setInteractive({ useHandCursor: true });
+        const declineLbl = this.add.text(cx + btnW / 2 + 6, btnY, 'Not now', {
             fontSize: '12px', color: '#907060', fontFamily: FONT_DISPLAY,
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setDepth(225);
 
-        const container = this.add.container(cx, cy, [
-            bg, title, bodyText, acceptBg, acceptLbl, declineBg, declineLbl,
-        ]).setDepth(225).setAlpha(0);
+        const items = [bg, title, bodyText, acceptBg, acceptLbl, declineBg, declineLbl];
+        const container = this.add.container(0, 0, items).setDepth(225).setAlpha(0);
 
         this.questPrompt = container;
 
