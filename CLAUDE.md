@@ -15,6 +15,7 @@ A contemplative Maltese sheep-herding game. Phaser 3 + Vite + TypeScript, pnpm.
 src/
   config/
     constants.ts        — all tunable game values
+    fonts.ts            — shared FONT / FONT_DISPLAY strings (imported everywhere, never redeclared)
   entities/
     BaseEntity.ts       — shared base: scene ref, x/y, update(), destroy()
     Shepherd.ts         — player: joystick input, isMoving, guideActive, treatCount
@@ -28,22 +29,27 @@ src/
   scenes/
     GameScene.ts        — main scene: terrain, entities, grass, treats, mood, poetry
     UIScene.ts          — overlay: command buttons, guide button, mood icon, treat count, poem display
+    MinimapController.ts — full-screen parchment minimap with ink drawing and settlement markers
+    JoystickController.ts — virtual joystick for touch input
+    PoemOverlay.ts      — poem display container
   systems/
     FlockSystem.ts      — boids + dog repulsion + guided sheep + grass/stray integration + mood scaling
     CommandSystem.ts    — COMMANDS array, dispatch(), tryMatchVoice()
     TerrainSystem.ts    — chunked procedural terrain (garigue, coast, elevation), findRandomInteriorPosition()
-    GrassSystem.ts      — per-tile grass levels, regrowth, eat, visual overlay, grazing zones
-    TreatSystem.ts      — treat collectibles: spawn near player, shepherd collects, gives to dog
-    PoetrySystem.ts     — JSON poem loader, still-trigger, unlock via SaveSystem
-    VoiceSystem.ts      — SpeechRecognition wrapper, no locale lock, auto-restart
+    SettlementSystem.ts — placement, visuals, proximity detection, quest state machine
+    GrassSystem.ts      — per-tile grass levels, regrowth, eat, visual overlay, grazing zones (triggers poetry on full-zone bare)
+    TreatSystem.ts      — treat collectibles: spawn near player, shepherd collects via addTreats(), gives to dog
+    PoetrySystem.ts     — JSON poem loader, unlock via SaveSystem; triggered by grazing zones + quest rewards
+    VoiceSystem.ts      — SpeechRecognition wrapper, no locale lock, auto-restart (not wired — planned)
     SaveSystem.ts       — localStorage: raghaj_flock_count, raghaj_poems_unlocked[]
   pipelines/
-    VignettePipeline.ts — WebGL post-processing vignette
+    WarmVignetteFilter.ts — WebGL post-processing vignette (warm colour grade + radial blur)
   utils/
     iso.ts              — isoProject(wx, wy) → screen coords
   main.ts               — Phaser config (EXPAND, 60fps, devicePixelRatio resolution) + boot
 data/
   poems.json            — poem library: id, title, author, text_mt, text_en, audio
+  settlements.json      — 3 fixed villages + 4 random settlements (farmsteads, chapels)
 plans/
   roadmap.md            — phased development plan
 ```
@@ -54,14 +60,17 @@ Pure Phaser 2D — no Three.js. Isometric-style projection via `isoProject()` ut
 UIScene runs in parallel with GameScene as a display overlay (`scene.launch`).
 GameScene owns all entities and systems; emits events to UIScene via `scene.get('UIScene').events.emit()`.
 
-### Font constants (UIScene.ts)
+### Font constants (src/config/fonts.ts)
 - `FONT = "'Lora', Georgia, serif"` — body text, tooltips
 - `FONT_DISPLAY = "'Cinzel', Georgia, serif"` — command button labels
 
-Both loaded via Google Fonts in `index.html`.
+Both loaded via Google Fonts in `index.html`. **Always import from `src/config/fonts.ts` — never redeclare locally.**
 
 ### HiDPI
-Phaser config includes `resolution: window.devicePixelRatio` (via intersection type workaround — not in Phaser 3.90 types).
+Phaser config includes `resolution: window.devicePixelRatio` (via intersection type workaround — not in Phaser 4 types).
+
+### Phaser 4 type notes
+- Casting `GameObject` to `Components.Alpha` requires `as unknown as` in the middle — direct cast is rejected by tsc.
 
 ## Key Constants (src/config/constants.ts)
 

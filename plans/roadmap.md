@@ -2,7 +2,7 @@
 
 ## Phase 1: Prototype ✓ Complete
 
-- [x] Project scaffold (Vite + Phaser 3 + TypeScript + pnpm)
+- [x] Project scaffold (Vite + Phaser 4 + TypeScript + pnpm)
 - [x] Isometric-style top-down view via `isoProject()` utility
 - [x] Chunked procedural terrain (garigue, coast, elevation levels, sea)
 - [x] Shepherd entity with virtual joystick, run speed, camera follow
@@ -19,10 +19,15 @@
 - [x] Mexxi (guide) ability — nearby sheep orbit shepherd for 8s, 30s cooldown
 - [x] Ejja continuous follow — dog trails behind shepherd, periodic stray detours
 - [x] Trust-timed Ejja/Ieqaf duration (lerp min→max with trust)
-- [x] Poetry system (wired, poems disabled pending content)
-- [x] localStorage save: flock count + unlocked poems
-- [x] HiDPI canvas (devicePixelRatio), WebGL vignette post-processing
-- [x] Voice input (SpeechRecognition, keyword matching, no locale lock)
+- [x] Poetry system — triggered by fully-grazed zones + quest rewards
+- [x] localStorage save: flock count + unlocked poems + settlement positions + quest progress
+- [x] HiDPI canvas (devicePixelRatio), WebGL warm vignette post-processing (Phaser 4 Filter)
+- [x] Settlements system — 3 fixed villages + 4 random, proximity detection, quest state machine
+- [x] Parchment minimap with ink drawing, settlement markers, open/close toggle
+- [x] Wild sheep — scatter at startup, join flock when shepherd approaches
+- [x] Small-flock merge cohesion — isolated sheep drift toward larger clusters
+- [x] Zoom (mouse wheel + keyboard +/-)
+- [ ] Voice input (SpeechRecognition, keyword matching) — VoiceSystem built, not yet wired
 
 ---
 
