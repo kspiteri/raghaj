@@ -11,11 +11,12 @@ import {
 } from '../config/constants';
 import { FONT, FONT_DISPLAY } from '../config/fonts';
 import { isoJoystickTransform } from '../utils/iso';
+import type { ControlMode } from '../config/types';
 import MinimapController  from './MinimapController';
 import JoystickController from './JoystickController';
 import PoemOverlay        from './PoemOverlay';
-
-type ControlMode = 'keyboard' | 'touch';
+import ControlsOverlay    from './ControlsOverlay';
+import SaveSystem         from '../systems/SaveSystem';
 
 // Keyboard shortcut labels matching COMMANDS order
 const CMD_KEYS = ['1', '2', '3', '4'];
@@ -28,12 +29,14 @@ export default class UIScene extends Phaser.Scene {
     private commandSystem!: CommandSystem;
     private shepherd!: Shepherd;
     private dog!: Dog;
+    private save!: SaveSystem;
 
     private controlMode: ControlMode = 'touch';
 
-    private minimap!:  MinimapController;
-    private joystick!: JoystickController;
-    private poem!:     PoemOverlay;
+    private minimap!:   MinimapController;
+    private joystick!:  JoystickController;
+    private poem!:      PoemOverlay;
+    private controls!:  ControlsOverlay;
 
     // Status bar objects (recreated on layout)
     private statusBar!:   Phaser.GameObjects.Rectangle;
@@ -48,6 +51,7 @@ export default class UIScene extends Phaser.Scene {
     private questTracker: Phaser.GameObjects.Text | null = null;
     private questTrackerText = '';  // persists across layout rebuilds
     private mapToggleBtn: Phaser.GameObjects.Text | null = null;
+    private helpBtn: Phaser.GameObjects.Text | null = null;
 
     // Command row (recreated on layout)
     private cmdRow!: Phaser.GameObjects.Rectangle;
@@ -72,10 +76,11 @@ export default class UIScene extends Phaser.Scene {
         super({ key: 'UIScene' });
     }
 
-    init(data: { commandSystem: CommandSystem; shepherd: Shepherd; dog: Dog }): void {
+    init(data: { commandSystem: CommandSystem; shepherd: Shepherd; dog: Dog; save: SaveSystem }): void {
         this.commandSystem = data.commandSystem;
         this.shepherd      = data.shepherd;
         this.dog           = data.dog;
+        this.save          = data.save;
     }
 
     create(): void {
@@ -83,9 +88,10 @@ export default class UIScene extends Phaser.Scene {
         const hasTouch     = this.sys.game.device.input.touch || navigator.maxTouchPoints > 0;
         this.controlMode   = hasTouch ? 'touch' : 'keyboard';
 
-        this.poem    = new PoemOverlay(this);
-        this.minimap = new MinimapController(this);
+        this.poem     = new PoemOverlay(this);
+        this.minimap  = new MinimapController(this);
         this.joystick = new JoystickController(this, this.shepherd, HUD_H, () => this.controlMode);
+        this.controls = new ControlsOverlay(this, this.save);
 
         this.minimap.build();
         this.minimap.setSettlementSource(
@@ -119,6 +125,13 @@ export default class UIScene extends Phaser.Scene {
         this.input.keyboard?.on('keydown-MINUS', () => this.stepZoom(-1));
         this.input.keyboard?.on('keydown-EQUALS', () => this.stepZoom(+1)); // = without shift
         this.input.keyboard?.on('keydown-M', () => this.minimap.toggle());
+
+        // Show controls on first load; re-openable with ? key or /
+        if (!this.save.hasSeenControls()) {
+            this.time.delayedCall(300, () => this.showControls(true));
+        }
+        this.input.keyboard?.on('keydown-QUESTION_MARK', () => this.showControls());
+        this.input.keyboard?.on('keydown-SLASH',         () => this.showControls()); // fallback for some layouts
     }
 
     update(): void {
@@ -215,6 +228,13 @@ export default class UIScene extends Phaser.Scene {
         this.layout();
     }
 
+    // ── Controls overlay ──────────────────────────────────────────────────────
+
+    private showControls(firstRun = false): void {
+        const { width, height } = this.scale;
+        this.controls.show(width, height, this.controlMode, firstRun);
+    }
+
     // ── Layout ────────────────────────────────────────────────────────────────
 
     private layout(): void {
@@ -245,6 +265,8 @@ export default class UIScene extends Phaser.Scene {
         this.questTracker = null;
         this.mapToggleBtn?.destroy();
         this.mapToggleBtn = null;
+        this.helpBtn?.destroy();
+        this.helpBtn = null;
 
         const y = height - HUD_H;
 
@@ -279,6 +301,15 @@ export default class UIScene extends Phaser.Scene {
         // Map toggle — stored so it can be destroyed on rebuild
         this.mapToggleBtn = this.minimap.createToggleButton(x, cy);
         x += 30;
+
+        // Help / controls button
+        this.helpBtn = this.add.text(x, cy, '?', {
+            fontSize: '15px', color: '#907060', fontFamily: FONT_DISPLAY, fontStyle: 'bold',
+        }).setOrigin(0, 0.5).setDepth(200).setInteractive({ useHandCursor: true });
+        this.helpBtn.on('pointerover', () => this.helpBtn?.setColor('#f0d8a0'));
+        this.helpBtn.on('pointerout',  () => this.helpBtn?.setColor('#907060'));
+        this.helpBtn.on('pointerdown', () => this.showControls());
+        x += 24;
 
         // Active quest tracker — fills remaining space left of Mexxi pill
         const pillW    = 90;
@@ -326,7 +357,7 @@ export default class UIScene extends Phaser.Scene {
         this.cmdRow?.destroy();
         this.cmdButtons.forEach(b => b.destroy());
         this.cmdRowItems.forEach(o => (o as Phaser.GameObjects.GameObject).destroy());
-        this.cmdTooltip?.destroy();
+        this.cmdTooltip?.destroy(true);
         this.cmdButtons  = [];
         this.cmdRowItems = [];
         this.treatBtn      = null;
@@ -511,16 +542,12 @@ export default class UIScene extends Phaser.Scene {
         const allItems: Phaser.GameObjects.GameObject[] = [];
         const depth = 225;
 
-        const bg = this.add.rectangle(cx, cy, panelW, panelH, 0x120c04, 0.93)
-            .setStrokeStyle(1, 0x6a5040, 0.9).setOrigin(0.5).setDepth(depth);
-        allItems.push(bg);
-
-        const title = this.add.text(cx, cy - panelH / 2 + PAD, data.settlement.name, {
-            fontSize: '13px', color: '#c8a060', fontFamily: FONT, fontStyle: 'bold',
-        }).setOrigin(0.5, 0).setDepth(depth);
-        allItems.push(title);
+        // Sentinel container — declared here so dismiss() can reference it before its assignment
+        const tweenHandle = this.add.container(0, 0).setDepth(depth);
+        this.questPrompt = tweenHandle;
 
         const dismiss = () => {
+            if (this.questPrompt !== tweenHandle) return;
             allItems.forEach(o => {
                 this.tweens.killTweensOf(o);
                 this.tweens.add({ targets: o, alpha: 0, duration: 200, onComplete: () => (o as Phaser.GameObjects.GameObject & { destroy(): void }).destroy() });
@@ -529,6 +556,15 @@ export default class UIScene extends Phaser.Scene {
             tweenHandle.destroy();
             this.questPrompt = null;
         };
+
+        const bg = this.add.rectangle(cx, cy, panelW, panelH, 0x120c04, 0.95)
+            .setStrokeStyle(1, 0x6a5040, 0.9).setOrigin(0.5).setDepth(depth);
+        allItems.push(bg);
+
+        const title = this.add.text(cx, cy - panelH / 2 + PAD, data.settlement.name, {
+            fontSize: '13px', color: '#c8a060', fontFamily: FONT, fontStyle: 'bold',
+        }).setOrigin(0.5, 0).setDepth(depth);
+        allItems.push(title);
 
         let rowY = cy - panelH / 2 + PAD + 22;
         for (const q of data.quests) {
@@ -570,9 +606,5 @@ export default class UIScene extends Phaser.Scene {
 
         allItems.forEach(o => (o as unknown as Phaser.GameObjects.Components.Alpha).setAlpha(0));
         this.tweens.add({ targets: allItems, alpha: 1, duration: 300 });
-
-        // Empty sentinel container used only as a handle for the "kill existing prompt" guard
-        const tweenHandle = this.add.container(0, 0).setDepth(depth);
-        this.questPrompt = tweenHandle;
     }
 }

@@ -32,6 +32,7 @@ export default class GameScene extends Phaser.Scene {
     private flockMood      = 0.5;
     private moodTimer      = 0;
     private guideWasActive = false;
+    private startupGrace   = 2000; // ms — suppress settlement/poem events on load
 
     constructor() {
         super({ key: 'GameScene' });
@@ -79,13 +80,14 @@ export default class GameScene extends Phaser.Scene {
             onQuestAvailable: (s, quests) => this.scene.get('UIScene').events.emit(SETTLEMENT_EVENTS.QUEST_AVAILABLE, { settlement: s, quests }),
             onQuestComplete:  (q)    => this.scene.get('UIScene').events.emit(SETTLEMENT_EVENTS.QUEST_COMPLETE, q),
             onTreats:         (n)    => this.shepherd.addTreats(n),
-            onPoemTrigger:    ()     => this.poetrySystem.triggerPoem(),
+            onPoemTrigger:    ()     => { /* poems disabled */ },
         });
 
         this.scene.launch('UIScene', {
             commandSystem: this.commandSystem,
             shepherd:      this.shepherd,
             dog:           this.dog,
+            save:          this.saveSystem,
         });
 
         this.scene.get('UIScene').events.on(SETTLEMENT_EVENTS.QUEST_ACCEPT, (sId: string, qId: string) => {
@@ -115,6 +117,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     private showPoem(poem: Poem): void {
+        if (this.startupGrace > 0) return;
         this.scene.get('UIScene').events.emit('show-poem', poem);
     }
 
@@ -140,6 +143,12 @@ export default class GameScene extends Phaser.Scene {
 
         this.grassSystem.update(delta);
         this.treatSystem.update(delta, this.shepherd);
+
+        if (this.startupGrace > 0) {
+            this.startupGrace -= delta;
+            return;
+        }
+
         this.settlementSystem.update(this.shepherd.x, this.shepherd.y);
 
         // Sync guided sheep state — lock in on activation, clear on expiry
@@ -186,7 +195,7 @@ export default class GameScene extends Phaser.Scene {
             this.moodTimer = 0;
             this.flockMood = this.grassSystem.averageGrassUnder(this.flock.sheep);
             this.scene.get('UIScene').events.emit('mood-update', this.flockMood);
-            this.grassSystem.checkGrazingZones(() => this.poetrySystem.triggerPoem());
+            this.grassSystem.checkGrazingZones(() => { /* poems disabled */ });
         }
 
         this.poetrySystem.update(this.shepherd.isMoving, delta);

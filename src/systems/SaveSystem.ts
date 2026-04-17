@@ -3,6 +3,7 @@ const KEY_POEMS           = 'raghaj_poems_unlocked';
 const KEY_SETTLEMENT_POS  = 'raghaj_settlement_positions';
 const KEY_DISCOVERIES     = 'raghaj_discoveries';
 const KEY_QUESTS_DONE     = 'raghaj_quests_done';
+const KEY_CONTROLS_SEEN   = 'raghaj_controls_seen';
 
 export default class SaveSystem {
     getFlockCount(): number {
@@ -60,4 +61,15 @@ export default class SaveSystem {
 
     getQuestsDone(): string[]           { return this.readStringList(KEY_QUESTS_DONE); }
     completeQuest(id: string): void     { this.appendToList(KEY_QUESTS_DONE, id); }
+
+    // ── Controls seen ─────────────────────────────────────────────────────────
+    // Note: in private-browsing contexts localStorage throws — hasSeenControls returns false
+    // (safe: overlay shows again) and markControlsSeen silently no-ops (overlay shows every session).
+
+    hasSeenControls(): boolean {
+        try { return localStorage.getItem(KEY_CONTROLS_SEEN) !== null; } catch { return false; }
+    }
+    markControlsSeen(): void {
+        try { localStorage.setItem(KEY_CONTROLS_SEEN, '1'); } catch { /* private browsing — acceptable */ }
+    }
 }
