@@ -1,4 +1,6 @@
 import * as Phaser from 'phaser';
+import { WORLD_WIDTH, WORLD_HEIGHT } from '../config/constants';
+import type { SettlementMarker } from '../systems/SettlementSystem';
 
 const FONT = "'Lora', Georgia, serif";
 const MAP_MARGIN = 10;
@@ -8,11 +10,14 @@ export default class MinimapController {
     private mapContainer!:  Phaser.GameObjects.Container;
     private mapImage!:      Phaser.GameObjects.Image;
     private mapGraphics!:   Phaser.GameObjects.Graphics;
+    private settlementLayer!: Phaser.GameObjects.Graphics;
     private mapFrame!:      Phaser.GameObjects.Graphics;
     private mapOverlay!:    Phaser.GameObjects.Rectangle;
     private mapVisible     = false;
     private mapDrawPtr:    number | null = null;
     private lastDrawPos    = { x: 0, y: 0 };
+    private settlementSource: (() => SettlementMarker[]) | null = null;
+    private settlementLabels: Phaser.GameObjects.Text[] = [];
 
     constructor(private scene: Phaser.Scene) {}
 
@@ -25,6 +30,8 @@ export default class MinimapController {
 
         // Map image — display size set in position()
         this.mapImage = this.scene.add.image(0, 0, 'minimap-2d').setOrigin(0);
+        // Settlement cartographic markers (below user ink)
+        this.settlementLayer = this.scene.add.graphics();
         // Ink drawing layer (container-local coords)
         this.mapGraphics = this.scene.add.graphics();
         // Ornate parchment frame (redrawn in position())
@@ -45,7 +52,7 @@ export default class MinimapController {
         }).setName('closeBtn').setInteractive({ useHandCursor: true });
         closeBtn.on('pointerdown', () => this.toggle());
 
-        this.mapContainer.add([this.mapImage, this.mapGraphics, this.mapFrame, clearBtn, closeBtn]);
+        this.mapContainer.add([this.mapImage, this.settlementLayer, this.mapGraphics, this.mapFrame, clearBtn, closeBtn]);
 
         // ── Drawing handlers ─────────────────────────────────────────────
         this.scene.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
@@ -106,6 +113,7 @@ export default class MinimapController {
         this.mapOverlay.setVisible(this.mapVisible);
         this.mapContainer.setVisible(this.mapVisible);
         this.position();
+        if (this.mapVisible) this.redrawSettlements();
     }
 
     createToggleButton(x: number, cy: number): Phaser.GameObjects.Text {
@@ -139,6 +147,66 @@ export default class MinimapController {
 
     private setDrawStyle(): void {
         this.mapGraphics.lineStyle(2, 0x3a2508, 0.80);
+    }
+
+    setSettlementSource(fn: () => SettlementMarker[]): void {
+        this.settlementSource = fn;
+    }
+
+    private worldToMap(wx: number, wy: number): { x: number; y: number } {
+        return {
+            x: (wx / WORLD_WIDTH)  * TEXTURE_SIZE,
+            y: (wy / WORLD_HEIGHT) * TEXTURE_SIZE,
+        };
+    }
+
+    private redrawSettlements(): void {
+        if (!this.settlementSource) return;
+        const g = this.settlementLayer;
+        g.clear();
+
+        // Remove previous labels
+        for (const lbl of this.settlementLabels) {
+            this.mapContainer.remove(lbl, true);
+        }
+        this.settlementLabels = [];
+
+        const INK   = 0x3a2508;
+        const FILL  = 0xd4b888;
+
+        for (const m of this.settlementSource()) {
+            const { x, y } = this.worldToMap(m.wx, m.wy);
+
+            if (m.type === 'village') {
+                // Circle with centre dot — classical town symbol
+                g.lineStyle(1.0, INK, 0.9);
+                g.fillStyle(FILL, 0.85);
+                g.fillCircle(x, y, 5);
+                g.strokeCircle(x, y, 5);
+                g.fillStyle(INK, 1);
+                g.fillCircle(x, y, 1.5);
+            } else if (m.type === 'chapel') {
+                // Small cross — kappella symbol
+                g.lineStyle(1.2, INK, 0.9);
+                g.beginPath();
+                g.moveTo(x,     y - 5); g.lineTo(x,     y + 5);
+                g.moveTo(x - 3, y - 2); g.lineTo(x + 3, y - 2);
+                g.strokePath();
+            } else {
+                // Farmstead — small filled square
+                g.fillStyle(INK, 0.75);
+                g.fillRect(x - 2.5, y - 2.5, 5, 5);
+            }
+
+            // Name label in parchment ink
+            const label = this.scene.add.text(x, y - 8, m.name, {
+                fontSize: m.type === 'village' ? '8px' : '6px',
+                color: '#3a2508',
+                fontFamily: FONT,
+            }).setOrigin(0.5, 1);
+            this.mapContainer.add(label);
+            this.settlementLabels.push(label);
+        }
     }
 
     private drawParchmentFrame(size: number): void {

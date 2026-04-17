@@ -3,7 +3,7 @@ import CommandSystem, { COMMANDS } from '../systems/CommandSystem';
 import Shepherd from '../entities/Shepherd';
 import Dog from '../entities/Dog/Dog';
 import { Poem } from '../systems/PoetrySystem';
-import { PlacedSettlement, QuestDef, SETTLEMENT_EVENTS } from '../systems/SettlementSystem';
+import { PlacedSettlement, QuestDef, SETTLEMENT_EVENTS, SettlementMarker } from '../systems/SettlementSystem';
 import {
     GUIDE_COOLDOWN_MS, ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
     SHEPHERD_WALK_SPEED, SHEPHERD_RUN_SPEED, TREAT_GIVE_RADIUS,
@@ -86,6 +86,9 @@ export default class UIScene extends Phaser.Scene {
         this.joystick = new JoystickController(this, this.shepherd, HUD_H, () => this.controlMode);
 
         this.minimap.build();
+        this.minimap.setSettlementSource(
+            () => (this.scene.get('GameScene') as unknown as { getSettlementMarkers(): SettlementMarker[] }).getSettlementMarkers(),
+        );
         this.joystick.build((px, py) => this.minimap.isPointerInside(px, py));
         this.bindKeyboard();
         this.layout();

@@ -9,7 +9,7 @@ import PoetrySystem from '../systems/PoetrySystem';
 import SaveSystem from '../systems/SaveSystem';
 import GrassSystem from '../systems/GrassSystem';
 import TreatSystem from '../systems/TreatSystem';
-import SettlementSystem, { SETTLEMENT_EVENTS } from '../systems/SettlementSystem';
+import SettlementSystem, { SETTLEMENT_EVENTS, SettlementMarker } from '../systems/SettlementSystem';
 import { WarmVignetteController } from '../filters/WarmVignetteFilter';
 import { WORLD_WIDTH, WORLD_HEIGHT, TILE_SIZE, GUIDE_RADIUS, MOOD_UPDATE_INTERVAL_MS, WILD_SHEEP_COUNT, WILD_MIN_DIST, WILD_JOIN_RADIUS } from '../config/constants';
 import { Poem } from '../systems/PoetrySystem';
@@ -108,6 +108,10 @@ export default class GameScene extends Phaser.Scene {
             this.flock.addWild(x, y);
             placed++;
         }
+    }
+
+    getSettlementMarkers(): SettlementMarker[] {
+        return this.settlementSystem.getMarkers();
     }
 
     private showPoem(poem: Poem): void {

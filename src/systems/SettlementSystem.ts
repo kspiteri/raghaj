@@ -48,6 +48,12 @@ export interface ActiveQuest {
     carryingItem: boolean;
 }
 
+export type SettlementMarker = {
+    wx: number; wy: number;
+    name: string;
+    type: 'village' | 'farmstead' | 'chapel';
+};
+
 interface SettlementCallbacks {
     onEnter:          (s: PlacedSettlement) => void;
     onQuestAvailable: (s: PlacedSettlement, q: QuestDef) => void;
@@ -153,37 +159,56 @@ export default class SettlementSystem {
     }
 
     // ── Visuals ───────────────────────────────────────────────────────────────
+    //
+    // Each draw* method is a sprite placeholder — replace the Graphics calls
+    // with scene.add.sprite / scene.add.image once assets are ready.
+    // Coordinate origin (0,0) = ground anchor; buildings draw upward (−y).
+
+    // Maltese limestone palette
+    private static readonly PAL = {
+        STONE:         0xd4a862,  // main wall — warm honey limestone
+        STONE_SHADE:   0xb8904a,  // shadow face
+        STONE_DARK:    0x9a7432,  // deep shadow / parapet edge
+        WINDOW:        0x1a2c3a,  // window opening
+        DOOR:          0x1a3a60,  // wooden door (deep blue)
+        BALCONY_BLUE:  0x1a4a8a,  // gallarija — classic blue
+        BALCONY_GREEN: 0x1a5a38,  // gallarija — green variant
+        DOME:          0xc89848,  // church dome — slightly richer
+        CROSS:         0x7a5825,  // bronze cross
+        ROOF:          0xa88040,  // roof / parapet cap
+    } as const;
 
     private createVisual(
         scene: Phaser.Scene,
         s: PlacedSettlement,
     ): Phaser.GameObjects.Container {
-        const iso   = isoProject(s.wx, s.wy);
-        const color = s.type === 'village'   ? 0xc8a060 :
-                      s.type === 'chapel'    ? 0xd0c090 : 0x8a7050;
-        const size  = s.type === 'village' ? 12 : 8;
-
+        const iso = isoProject(s.wx, s.wy);
         const gfx = scene.add.graphics();
 
-        const traceDiamond = () => {
-            gfx.beginPath();
-            gfx.moveTo(0, -size);
-            gfx.lineTo(size, 0);
-            gfx.lineTo(0, size);
-            gfx.lineTo(-size, 0);
-            gfx.closePath();
-        };
+        // Scale drives rendered size in iso space.
+        // Village scale=5 → ~320px tall at iso coords (≈130px on screen at zoom 0.4).
+        // Adjust label to sit above the scaled top.
+        let buildScale: number;
+        let labelY: number;
 
-        gfx.fillStyle(color, 1);
-        traceDiamond();
-        gfx.fillPath();
+        if (s.type === 'village') {
+            this.drawVillage(gfx);
+            buildScale = 5;
+            labelY = -64 * buildScale - 15;  // above cross top
+        } else if (s.type === 'chapel') {
+            this.drawChapel(gfx);
+            buildScale = 4;
+            labelY = -47 * buildScale - 12;
+        } else {
+            this.drawFarmstead(gfx);
+            buildScale = 4;
+            labelY = -30 * buildScale - 12;
+        }
 
-        gfx.lineStyle(1.5, 0x3a2a10, 0.7);
-        traceDiamond();
-        gfx.strokePath();
+        gfx.setScale(buildScale);
 
         const fontSize = s.type === 'village' ? '14px' : '11px';
-        const label = scene.add.text(0, -(size + 14), s.name, {
+        const label = scene.add.text(0, labelY, s.name, {
             fontSize,
             color: '#f5e0c0',
             fontFamily: "'Lora', Georgia, serif",
@@ -192,6 +217,154 @@ export default class SettlementSystem {
         }).setOrigin(0.5, 1);
 
         return scene.add.container(iso.x, iso.y, [gfx, label]).setDepth(15);
+    }
+
+    /** Village — dense cluster + church dome. Placeholder for sprite sheet. */
+    private drawVillage(g: Phaser.GameObjects.Graphics): void {
+        const { STONE, STONE_SHADE, STONE_DARK, WINDOW, DOOR,
+                BALCONY_BLUE, BALCONY_GREEN, DOME, CROSS, ROOF } = SettlementSystem.PAL;
+
+        // ── Building cluster (left → right) ──────────────────────────────────
+        // Each rect is one "building face" sprite placeholder
+        g.fillStyle(STONE_SHADE, 1);
+        g.fillRect(-38,  -12, 12, 12);   // far-left outbuilding
+
+        g.fillStyle(STONE, 1);
+        g.fillRect(-28,  -20, 16, 20);   // left building
+
+        g.fillStyle(STONE, 1);
+        g.fillRect(-14,  -28, 14, 28);   // centre-left (taller)
+
+        g.fillStyle(STONE_SHADE, 1);
+        g.fillRect(  -2, -32, 16, 32);   // centre (tallest — houses the bell tower)
+
+        g.fillStyle(STONE, 1);
+        g.fillRect(  16, -22, 14, 22);   // right building
+
+        g.fillStyle(STONE_SHADE, 1);
+        g.fillRect(  28, -10, 10, 10);   // far-right outbuilding
+
+        // ── Parapet caps (roofline) ───────────────────────────────────────────
+        g.fillStyle(ROOF, 1);
+        g.fillRect(-40,  -12,  14, 3);
+        g.fillRect(-30,  -20,  18, 3);
+        g.fillRect(-16,  -28,  16, 3);
+        g.fillRect(  -4, -32,  18, 3);
+        g.fillRect(  14, -22,  16, 3);
+        g.fillRect(  26, -10,  12, 3);
+
+        // ── Bell tower shaft (centre building) ───────────────────────────────
+        g.fillStyle(STONE, 1);
+        g.fillRect(-4, -46, 10, 16);
+
+        // ── Church dome ───────────────────────────────────────────────────────
+        g.fillStyle(STONE_DARK, 1);
+        g.fillRect(-6, -52, 14, 8);      // drum
+
+        g.fillStyle(DOME, 1);
+        g.fillCircle(1, -53, 9);         // dome sphere
+
+        // Cross
+        g.fillStyle(CROSS, 1);
+        g.fillRect( 0, -64, 2,  8);      // vertical
+        g.fillRect(-3, -60, 8,  2);      // horizontal
+
+        // ── Windows ───────────────────────────────────────────────────────────
+        g.fillStyle(WINDOW, 1);
+        g.fillRect(-26, -15, 4, 5);      // left building
+        g.fillRect(-11, -22, 4, 5);      // centre-left
+        g.fillRect(  0, -25, 4, 5);      // centre, upper
+        g.fillRect(  7, -25, 4, 5);
+        g.fillRect(  0, -14, 4, 5);      // centre, lower
+        g.fillRect( 18, -16, 4, 5);      // right building
+
+        // ── Blue gallarija (enclosed balcony) — iconic Maltese detail ─────────
+        g.fillStyle(BALCONY_BLUE, 1);
+        g.fillRect( -1, -16, 9, 5);      // centre building
+
+        g.fillStyle(BALCONY_GREEN, 1);
+        g.fillRect(-12, -20, 7, 4);      // centre-left
+
+        // ── Door ──────────────────────────────────────────────────────────────
+        g.fillStyle(DOOR, 1);
+        g.fillRect(  1,  -8, 5, 8);      // arched door (arch approximated by rect)
+    }
+
+    /** Farmstead — simple stone razzett. Placeholder for sprite. */
+    private drawFarmstead(g: Phaser.GameObjects.Graphics): void {
+        const { STONE, STONE_SHADE, STONE_DARK, WINDOW, DOOR, BALCONY_BLUE, ROOF } = SettlementSystem.PAL;
+
+        // Main building body
+        g.fillStyle(STONE, 1);
+        g.fillRect(-18, -22, 36, 22);
+
+        // Upper section (set back)
+        g.fillStyle(STONE_SHADE, 1);
+        g.fillRect(-10, -30, 20, 10);
+
+        // Parapet caps
+        g.fillStyle(ROOF, 1);
+        g.fillRect(-20, -22, 38, 3);
+        g.fillRect(-12, -30, 22, 3);
+
+        // Shadow under eave
+        g.fillStyle(STONE_DARK, 1);
+        g.fillRect(-18, -19, 36, 2);
+
+        // Windows
+        g.fillStyle(WINDOW, 1);
+        g.fillRect(-14, -16, 4, 5);
+        g.fillRect( -4, -16, 4, 5);
+        g.fillRect(  6, -16, 4, 5);
+        g.fillRect( -5, -26, 4, 5);  // upper window
+
+        // Balcony
+        g.fillStyle(BALCONY_BLUE, 1);
+        g.fillRect(-3, -10, 8, 4);
+
+        // Door
+        g.fillStyle(DOOR, 1);
+        g.fillRect(-3,  -8, 6, 8);
+    }
+
+    /** Chapel — small kappella with bell tower. Placeholder for sprite. */
+    private drawChapel(g: Phaser.GameObjects.Graphics): void {
+        const { STONE, STONE_SHADE, STONE_DARK, WINDOW, DOOR, DOME, CROSS, ROOF } = SettlementSystem.PAL;
+
+        // Nave body
+        g.fillStyle(STONE, 1);
+        g.fillRect(-14, -20, 28, 20);
+
+        // Facade / bell tower
+        g.fillStyle(STONE_SHADE, 1);
+        g.fillRect( -8, -34, 16, 16);
+
+        // Parapet caps
+        g.fillStyle(ROOF, 1);
+        g.fillRect(-16, -20, 30, 3);
+        g.fillRect(-10, -34, 18, 3);
+
+        // Small dome on facade
+        g.fillStyle(DOME, 1);
+        g.fillCircle(0, -36, 6);
+
+        g.fillStyle(STONE_DARK, 1);
+        g.fillRect(-3, -40, 6, 5);    // drum
+
+        // Cross
+        g.fillStyle(CROSS, 1);
+        g.fillRect( 0, -47, 2, 6);
+        g.fillRect(-2, -44, 6, 2);
+
+        // Windows
+        g.fillStyle(WINDOW, 1);
+        g.fillRect(-10, -14, 4, 5);
+        g.fillRect(  6, -14, 4, 5);
+        g.fillRect( -2, -28, 5, 6);   // rose window hint on facade
+
+        // Door arch
+        g.fillStyle(DOOR, 1);
+        g.fillRect( -3,  -8, 6, 8);
     }
 
     // ── Update loop ───────────────────────────────────────────────────────────
@@ -260,6 +433,12 @@ export default class SettlementSystem {
 
     getActiveQuest(): ActiveQuest | null {
         return this.activeQuest;
+    }
+
+    getMarkers(): SettlementMarker[] {
+        return this.settlements.map(s => ({
+            wx: s.wx, wy: s.wy, name: s.name, type: s.type,
+        }));
     }
 
     destroy(): void {
