@@ -3,6 +3,7 @@ import CommandSystem, { COMMANDS } from '../systems/CommandSystem';
 import Shepherd from '../entities/Shepherd';
 import Dog from '../entities/Dog/Dog';
 import { Poem } from '../systems/PoetrySystem';
+import { PlacedSettlement, QuestDef, SETTLEMENT_EVENTS } from '../systems/SettlementSystem';
 import {
     GUIDE_COOLDOWN_MS, ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
     SHEPHERD_WALK_SPEED, SHEPHERD_RUN_SPEED, TREAT_GIVE_RADIUS,
@@ -61,6 +62,10 @@ export default class UIScene extends Phaser.Scene {
     private wasd!: Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>;
     private shift!: Phaser.Input.Keyboard.Key;
 
+    // Settlement UI
+    private locationBanner: Phaser.GameObjects.Container | null = null;
+    private questPrompt:    Phaser.GameObjects.Container | null = null;
+
     constructor() {
         super({ key: 'UIScene' });
     }
@@ -86,8 +91,11 @@ export default class UIScene extends Phaser.Scene {
         this.layout();
 
         this.scale.on('resize', this.layout, this);
-        this.events.on('show-poem',   (poem: Poem)   => this.poem.display(poem));
-        this.events.on('mood-update', (mood: number) => this.updateMoodIcon(mood));
+        this.events.on('show-poem',                      (poem: Poem)                                                  => this.poem.display(poem));
+        this.events.on('mood-update',                    (mood: number)                                                => this.updateMoodIcon(mood));
+        this.events.on(SETTLEMENT_EVENTS.ENTER,          (s: PlacedSettlement)                                        => this.showLocationBanner(s.name));
+        this.events.on(SETTLEMENT_EVENTS.QUEST_AVAILABLE,(data: { settlement: PlacedSettlement; quest: QuestDef })    => this.showQuestPrompt(data));
+        this.events.on(SETTLEMENT_EVENTS.QUEST_COMPLETE, (_q: QuestDef)                                               => this.showLocationBanner('Quest complete!'));
 
         // Mouse wheel zoom
         this.input.on('wheel', (
@@ -419,5 +427,112 @@ export default class UIScene extends Phaser.Scene {
         if (mood > 0.7)      this.moodIcon.setText('😊');
         else if (mood > 0.3) this.moodIcon.setText('😐');
         else                 this.moodIcon.setText('😤');
+    }
+
+    // ── Settlement notifications ──────────────────────────────────────────────
+
+    private showLocationBanner(text: string): void {
+        // Cancel any existing banner
+        if (this.locationBanner) {
+            this.tweens.killTweensOf(this.locationBanner);
+            this.locationBanner.destroy();
+            this.locationBanner = null;
+        }
+
+        const { width } = this.scale;
+        const bg    = this.add.rectangle(0, 0, width * 0.6, 36, 0x1a0f05, 0.82).setOrigin(0.5);
+        const label = this.add.text(0, 0, text, {
+            fontSize: '15px', color: '#f5e0c0',
+            fontFamily: FONT, fontStyle: 'bold',
+        }).setOrigin(0.5);
+
+        this.locationBanner = this.add.container(width / 2, 60, [bg, label])
+            .setDepth(220).setAlpha(0);
+
+        this.tweens.add({
+            targets:  this.locationBanner,
+            alpha:    1,
+            duration: 500,
+            ease:     'Sine.easeOut',
+            onComplete: () => {
+                this.time.delayedCall(2000, () => {
+                    if (!this.locationBanner) return;
+                    this.tweens.add({
+                        targets:  this.locationBanner,
+                        alpha:    0,
+                        duration: 500,
+                        ease:     'Sine.easeIn',
+                        onComplete: () => {
+                            this.locationBanner?.destroy();
+                            this.locationBanner = null;
+                        },
+                    });
+                });
+            },
+        });
+    }
+
+    private showQuestPrompt(data: { settlement: PlacedSettlement; quest: QuestDef }): void {
+        // Dismiss any existing prompt — kill tweens first so the onComplete doesn't null our new prompt
+        if (this.questPrompt) {
+            this.tweens.killTweensOf(this.questPrompt);
+            this.questPrompt.destroy();
+            this.questPrompt = null;
+        }
+
+        const { width, height } = this.scale;
+        const panelW = Math.min(320, width * 0.8);
+        const panelH = 120;
+        const cx     = width  / 2;
+        const cy     = height / 2 - 60;
+
+        const bg = this.add.rectangle(0, 0, panelW, panelH, 0x120c04, 0.92)
+            .setStrokeStyle(1, 0x6a5040, 0.8).setOrigin(0.5);
+
+        const title = this.add.text(0, -panelH / 2 + 14, data.settlement.name, {
+            fontSize: '13px', color: '#c8a060', fontFamily: FONT, fontStyle: 'bold',
+        }).setOrigin(0.5, 0);
+
+        const bodyText = this.add.text(0, -panelH / 2 + 34, data.quest.label, {
+            fontSize: '12px', color: '#f5e0c0', fontFamily: FONT,
+            wordWrap: { width: panelW - 24 }, align: 'center',
+        }).setOrigin(0.5, 0);
+
+        const btnY   = panelH / 2 - 20;
+        const btnW   = 90;
+
+        const acceptBg = this.add.rectangle(-btnW / 2 - 6, btnY, btnW, 28, 0x1a6040, 0.88)
+            .setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const acceptLbl = this.add.text(-btnW / 2 - 6, btnY, 'Accept', {
+            fontSize: '12px', color: '#a0f0b0', fontFamily: FONT_DISPLAY,
+        }).setOrigin(0.5);
+
+        const declineBg = this.add.rectangle(btnW / 2 + 6, btnY, btnW, 28, 0x2a1a10, 0.7)
+            .setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const declineLbl = this.add.text(btnW / 2 + 6, btnY, 'Not now', {
+            fontSize: '12px', color: '#907060', fontFamily: FONT_DISPLAY,
+        }).setOrigin(0.5);
+
+        const container = this.add.container(cx, cy, [
+            bg, title, bodyText, acceptBg, acceptLbl, declineBg, declineLbl,
+        ]).setDepth(225).setAlpha(0);
+
+        this.questPrompt = container;
+
+        this.tweens.add({ targets: container, alpha: 1, duration: 300 });
+
+        const dismiss = () => {
+            this.tweens.killTweensOf(container);
+            this.tweens.add({
+                targets: container, alpha: 0, duration: 200,
+                onComplete: () => { container.destroy(); this.questPrompt = null; },
+            });
+        };
+
+        acceptBg.on('pointerdown', () => {
+            this.events.emit(SETTLEMENT_EVENTS.QUEST_ACCEPT, data.settlement.id, data.quest.id);
+            dismiss();
+        });
+        declineBg.on('pointerdown', dismiss);
     }
 }

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "valletta",
+    "name": "Valletta",
+    "type": "village",
+    "anchor": { "fx": 0.759, "fy": 0.544 },
+    "quests": [
+      {
+        "id": "val-letter",
+        "type": "deliver",
+        "to": "mdina",
+        "label": "Deliver a letter to Mdina",
+        "reward": { "treats": 3 }
+      }
+    ]
+  },
+  {
+    "id": "mdina",
+    "name": "Mdina",
+    "type": "village",
+    "anchor": { "fx": 0.601, "fy": 0.510 },
+    "quests": [
+      {
+        "id": "mdi-poem",
+        "type": "visit",
+        "label": "Rest within the Silent City",
+        "reward": { "poemTrigger": true }
+      }
+    ]
+  },
+  {
+    "id": "marsaxlokk",
+    "name": "Marsaxlokk",
+    "type": "village",
+    "anchor": { "fx": 0.790, "fy": 0.703 },
+    "quests": [
+      {
+        "id": "mxl-letter",
+        "type": "deliver",
+        "to": "valletta",
+        "label": "Carry fresh catch to Valletta",
+        "reward": { "treats": 2 }
+      }
+    ]
+  },
+  {
+    "id": "farm-1",
+    "name": "Razzett",
+    "type": "farmstead",
+    "quests": [
+      {
+        "id": "farm1-visit",
+        "type": "visit",
+        "label": "Rest at the farmstead",
+        "reward": { "treats": 1 }
+      }
+    ]
+  },
+  {
+    "id": "farm-2",
+    "name": "Il-Fgura",
+    "type": "farmstead",
+    "quests": [
+      {
+        "id": "farm2-visit",
+        "type": "visit",
+        "label": "Rest at the farmstead",
+        "reward": { "treats": 1 }
+      }
+    ]
+  },
+  {
+    "id": "chapel-1",
+    "name": "Kappella",
+    "type": "chapel",
+    "quests": [
+      {
+        "id": "chap1-visit",
+        "type": "visit",
+        "label": "Offer a moment of stillness",
+        "reward": { "poemTrigger": true }
+      }
+    ]
+  },
+  {
+    "id": "chapel-2",
+    "name": "Għajn Tuffieħa",
+    "type": "chapel",
+    "quests": [
+      {
+        "id": "chap2-visit",
+        "type": "visit",
+        "label": "Offer a moment of stillness",
+        "reward": { "treats": 1 }
+      }
+    ]
+  }
+]

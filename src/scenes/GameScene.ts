@@ -9,6 +9,7 @@ import PoetrySystem from '../systems/PoetrySystem';
 import SaveSystem from '../systems/SaveSystem';
 import GrassSystem from '../systems/GrassSystem';
 import TreatSystem from '../systems/TreatSystem';
+import SettlementSystem, { SETTLEMENT_EVENTS } from '../systems/SettlementSystem';
 import { WarmVignetteController } from '../filters/WarmVignetteFilter';
 import { WORLD_WIDTH, WORLD_HEIGHT, TILE_SIZE, GUIDE_RADIUS, MOOD_UPDATE_INTERVAL_MS, WILD_SHEEP_COUNT, WILD_MIN_DIST, WILD_JOIN_RADIUS } from '../config/constants';
 import { Poem } from '../systems/PoetrySystem';
@@ -26,6 +27,7 @@ export default class GameScene extends Phaser.Scene {
     private saveSystem!: SaveSystem;
     private grassSystem!: GrassSystem;
     private treatSystem!: TreatSystem;
+    private settlementSystem!: SettlementSystem;
 
     private flockMood      = 0.5;
     private moodTimer      = 0;
@@ -62,7 +64,6 @@ export default class GameScene extends Phaser.Scene {
         this.flockSystem  = new FlockSystem();
 
         this.spawnWildSheep(cx, cy);
-
         this.commandSystem = new CommandSystem(this.dog, () => ({
             x: this.shepherd.x,
             y: this.shepherd.y,
@@ -73,10 +74,22 @@ export default class GameScene extends Phaser.Scene {
             this.saveSystem,
         );
 
+        this.settlementSystem = new SettlementSystem(this, terrain, this.saveSystem, {
+            onEnter:          (s)    => this.scene.get('UIScene').events.emit(SETTLEMENT_EVENTS.ENTER, s),
+            onQuestAvailable: (s, q) => this.scene.get('UIScene').events.emit(SETTLEMENT_EVENTS.QUEST_AVAILABLE, { settlement: s, quest: q }),
+            onQuestComplete:  (q)    => this.scene.get('UIScene').events.emit(SETTLEMENT_EVENTS.QUEST_COMPLETE, q),
+            onTreats:         (n)    => this.shepherd.addTreats(n),
+            onPoemTrigger:    ()     => this.poetrySystem.triggerPoem(),
+        });
+
         this.scene.launch('UIScene', {
             commandSystem: this.commandSystem,
             shepherd:      this.shepherd,
             dog:           this.dog,
+        });
+
+        this.scene.get('UIScene').events.on(SETTLEMENT_EVENTS.QUEST_ACCEPT, (sId: string, qId: string) => {
+            this.settlementSystem.acceptQuest(sId, qId);
         });
 
         // Warm colour grade + radial edge blur via custom filter (v4)
@@ -123,6 +136,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.grassSystem.update(delta);
         this.treatSystem.update(delta, this.shepherd);
+        this.settlementSystem.update(this.shepherd.x, this.shepherd.y);
 
         // Sync guided sheep state — lock in on activation, clear on expiry
         if (guideActive && !this.guideWasActive) {

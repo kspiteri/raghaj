@@ -123,6 +123,11 @@ export const ZOOM_MIN  = 0.18;
 export const ZOOM_MAX  = 1.0;
 export const ZOOM_STEP = 0.08;  // fractional multiplier per wheel tick
 
+// Settlements
+export const SETTLEMENT_INTERACT_RADIUS = 200;   // px — proximity trigger
+export const SETTLEMENT_MIN_DIST        = 3500;  // px — min distance between any two settlements
+export const SETTLEMENT_RANDOM_COUNT    = 4;
+
 // UI layout (used by UIScene and controllers)
 export const UI_CMD_ROW_H    = 56;
 export const UI_STATUS_BAR_H = 36;

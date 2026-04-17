@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import BaseEntity from './BaseEntity';
-import { SHEPHERD_RUN_SPEED, WORLD_WIDTH, WORLD_HEIGHT, GUIDE_DURATION_MS, GUIDE_COOLDOWN_MS } from '../config/constants';
+import { SHEPHERD_RUN_SPEED, WORLD_WIDTH, WORLD_HEIGHT, GUIDE_DURATION_MS, GUIDE_COOLDOWN_MS, TREAT_MAX_CARRY } from '../config/constants';
 import { isoProject } from '../utils/iso';
 
 const SCALE = 0.25;
@@ -48,8 +48,14 @@ export default class Shepherd extends BaseEntity {
         return true;
     }
 
+    /** Add treats from a quest reward, capped at TREAT_MAX_CARRY. */
+    addTreats(n: number): void {
+        this.treatCount = Math.min(TREAT_MAX_CARRY, this.treatCount + n);
+    }
+
     /** Activate guide ability. Returns false if on cooldown. */
-    activateGuide(): boolean {        if (this.guideCooldown > 0) return false;
+    activateGuide(): boolean {
+        if (this.guideCooldown > 0) return false;
         this.guideActive   = true;
         this.guideTimer    = GUIDE_DURATION_MS;
         this.guideCooldown = GUIDE_COOLDOWN_MS;
