@@ -46,6 +46,9 @@ export default class UIScene extends Phaser.Scene {
     private guideFill!:   Phaser.GameObjects.Rectangle;
     private guideLabel!:  Phaser.GameObjects.Text;
     private guideTooltip: Phaser.GameObjects.Container | null = null;
+    private questTracker: Phaser.GameObjects.Text | null = null;
+    private questTrackerText = '';  // persists across layout rebuilds
+    private mapToggleBtn: Phaser.GameObjects.Text | null = null;
 
     // Command row (recreated on layout)
     private cmdRow!: Phaser.GameObjects.Rectangle;
@@ -97,8 +100,8 @@ export default class UIScene extends Phaser.Scene {
         this.events.on('show-poem',                      (poem: Poem)                                                  => this.poem.display(poem));
         this.events.on('mood-update',                    (mood: number)                                                => this.updateMoodIcon(mood));
         this.events.on(SETTLEMENT_EVENTS.ENTER,          (s: PlacedSettlement)                                        => this.showLocationBanner(s.name));
-        this.events.on(SETTLEMENT_EVENTS.QUEST_AVAILABLE,(data: { settlement: PlacedSettlement; quest: QuestDef })    => this.showQuestPrompt(data));
-        this.events.on(SETTLEMENT_EVENTS.QUEST_COMPLETE, (_q: QuestDef)                                               => this.showLocationBanner('Quest complete!'));
+        this.events.on(SETTLEMENT_EVENTS.QUEST_AVAILABLE,(data: { settlement: PlacedSettlement; quests: QuestDef[] }) => this.showQuestBoard(data));
+        this.events.on(SETTLEMENT_EVENTS.QUEST_COMPLETE, (_q: QuestDef)                                               => { this.showLocationBanner('Quest complete!'); this.updateQuestTracker(null); });
 
         // Mouse wheel zoom
         this.input.on('wheel', (
@@ -239,6 +242,10 @@ export default class UIScene extends Phaser.Scene {
         this.guideLabel?.destroy();
         this.guideTooltip?.destroy();
         this.guideTooltip = null;
+        this.questTracker?.destroy();
+        this.questTracker = null;
+        this.mapToggleBtn?.destroy();
+        this.mapToggleBtn = null;
 
         const y = height - HUD_H;
 
@@ -270,13 +277,20 @@ export default class UIScene extends Phaser.Scene {
             .setOrigin(0, 0.5).setDepth(200);
         x += 60;
 
-        // Map toggle
-        this.minimap.createToggleButton(x, cy);
+        // Map toggle — stored so it can be destroyed on rebuild
+        this.mapToggleBtn = this.minimap.createToggleButton(x, cy);
+        x += 30;
+
+        // Active quest tracker — fills remaining space left of Mexxi pill
+        const pillW    = 90;
+        const pillX    = width - pillW / 2 - 10;
+        const trackerW = pillX - pillW / 2 - 10 - x;
+        this.questTracker = this.add.text(x, cy, this.questTrackerText, {
+            fontSize: '11px', color: '#c8d8a0', fontFamily: FONT, fontStyle: 'italic',
+            fixedWidth: Math.max(0, trackerW), wordWrap: { width: Math.max(0, trackerW) },
+        }).setOrigin(0, 0.5).setDepth(200);
 
         // Mexxi pill (right side)
-        const pillW = 90;
-        const pillX = width - pillW / 2 - 10;
-
         const guideTooltipText = this.add.text(0, 0, '', {
             fontSize: '11px', color: '#f5e6c8', fontFamily: FONT, align: 'center',
         }).setOrigin(0.5);
@@ -434,6 +448,11 @@ export default class UIScene extends Phaser.Scene {
 
     // ── Settlement notifications ──────────────────────────────────────────────
 
+    private updateQuestTracker(label: string | null): void {
+        this.questTrackerText = label ? `→ ${label}` : '';
+        this.questTracker?.setText(this.questTrackerText);
+    }
+
     private showLocationBanner(text: string): void {
         // Cancel any existing banner
         if (this.locationBanner) {
@@ -475,8 +494,7 @@ export default class UIScene extends Phaser.Scene {
         });
     }
 
-    private showQuestPrompt(data: { settlement: PlacedSettlement; quest: QuestDef }): void {
-        // Dismiss any existing prompt — kill tweens first so the onComplete doesn't null our new prompt
+    private showQuestBoard(data: { settlement: PlacedSettlement; quests: QuestDef[] }): void {
         if (this.questPrompt) {
             this.tweens.killTweensOf(this.questPrompt);
             this.questPrompt.destroy();
@@ -484,57 +502,79 @@ export default class UIScene extends Phaser.Scene {
         }
 
         const { width, height } = this.scale;
-        const panelW = Math.min(320, width * 0.8);
-        const panelH = 120;
+        const ROW_H  = 36;
+        const PAD    = 14;
+        const panelW = Math.min(340, width * 0.85);
+        const panelH = PAD * 2 + 22 + data.quests.length * ROW_H + 32; // title + rows + close btn
         const cx     = width  / 2;
-        const cy     = height / 2 - 60;
+        const cy     = height / 2 - 40;
 
-        const bg = this.add.rectangle(cx, cy, panelW, panelH, 0x120c04, 0.92)
-            .setStrokeStyle(1, 0x6a5040, 0.8).setOrigin(0.5).setDepth(225);
+        const allItems: Phaser.GameObjects.GameObject[] = [];
+        const depth = 225;
 
-        const title = this.add.text(cx, cy - panelH / 2 + 14, data.settlement.name, {
+        const bg = this.add.rectangle(cx, cy, panelW, panelH, 0x120c04, 0.93)
+            .setStrokeStyle(1, 0x6a5040, 0.9).setOrigin(0.5).setDepth(depth);
+        allItems.push(bg);
+
+        const title = this.add.text(cx, cy - panelH / 2 + PAD, data.settlement.name, {
             fontSize: '13px', color: '#c8a060', fontFamily: FONT, fontStyle: 'bold',
-        }).setOrigin(0.5, 0).setDepth(225);
-
-        const bodyText = this.add.text(cx, cy - panelH / 2 + 34, data.quest.label, {
-            fontSize: '12px', color: '#f5e0c0', fontFamily: FONT,
-            wordWrap: { width: panelW - 24 }, align: 'center',
-        }).setOrigin(0.5, 0).setDepth(225);
-
-        const btnY   = cy + panelH / 2 - 20;
-        const btnW   = 90;
-
-        const acceptBg = this.add.rectangle(cx - btnW / 2 - 6, btnY, btnW, 28, 0x1a6040, 0.88)
-            .setOrigin(0.5).setDepth(225).setInteractive({ useHandCursor: true });
-        const acceptLbl = this.add.text(cx - btnW / 2 - 6, btnY, 'Accept', {
-            fontSize: '12px', color: '#a0f0b0', fontFamily: FONT_DISPLAY,
-        }).setOrigin(0.5).setDepth(225);
-
-        const declineBg = this.add.rectangle(cx + btnW / 2 + 6, btnY, btnW, 28, 0x2a1a10, 0.7)
-            .setOrigin(0.5).setDepth(225).setInteractive({ useHandCursor: true });
-        const declineLbl = this.add.text(cx + btnW / 2 + 6, btnY, 'Not now', {
-            fontSize: '12px', color: '#907060', fontFamily: FONT_DISPLAY,
-        }).setOrigin(0.5).setDepth(225);
-
-        const items = [bg, title, bodyText, acceptBg, acceptLbl, declineBg, declineLbl];
-        const container = this.add.container(0, 0, items).setDepth(225).setAlpha(0);
-
-        this.questPrompt = container;
-
-        this.tweens.add({ targets: container, alpha: 1, duration: 300 });
+        }).setOrigin(0.5, 0).setDepth(depth);
+        allItems.push(title);
 
         const dismiss = () => {
-            this.tweens.killTweensOf(container);
-            this.tweens.add({
-                targets: container, alpha: 0, duration: 200,
-                onComplete: () => { container.destroy(); this.questPrompt = null; },
+            allItems.forEach(o => {
+                this.tweens.killTweensOf(o);
+                this.tweens.add({ targets: o, alpha: 0, duration: 200, onComplete: () => (o as Phaser.GameObjects.GameObject & { destroy(): void }).destroy() });
             });
+            this.tweens.killTweensOf(tweenHandle);
+            tweenHandle.destroy();
+            this.questPrompt = null;
         };
 
-        acceptBg.on('pointerdown', () => {
-            this.events.emit(SETTLEMENT_EVENTS.QUEST_ACCEPT, data.settlement.id, data.quest.id);
-            dismiss();
-        });
-        declineBg.on('pointerdown', dismiss);
+        let rowY = cy - panelH / 2 + PAD + 22;
+        for (const q of data.quests) {
+            const rowBg = this.add.rectangle(cx, rowY + ROW_H / 2, panelW - PAD * 2, ROW_H - 4, 0x1a1208, 0.6)
+                .setOrigin(0.5).setDepth(depth);
+            allItems.push(rowBg);
+
+            const rowLabel = this.add.text(cx - panelW / 2 + PAD + 4, rowY + ROW_H / 2, q.label, {
+                fontSize: '11px', color: '#f0dfc0', fontFamily: FONT,
+                fixedWidth: panelW - PAD * 2 - 70,
+            }).setOrigin(0, 0.5).setDepth(depth);
+            allItems.push(rowLabel);
+
+            const acceptBg = this.add.rectangle(cx + panelW / 2 - PAD - 30, rowY + ROW_H / 2, 56, ROW_H - 10, 0x1a6040, 0.9)
+                .setOrigin(0.5).setDepth(depth).setInteractive({ useHandCursor: true });
+            const acceptLbl = this.add.text(cx + panelW / 2 - PAD - 30, rowY + ROW_H / 2, 'Accept', {
+                fontSize: '10px', color: '#a0f0b0', fontFamily: FONT_DISPLAY,
+            }).setOrigin(0.5).setDepth(depth);
+            allItems.push(acceptBg, acceptLbl);
+
+            acceptBg.on('pointerdown', () => {
+                this.events.emit(SETTLEMENT_EVENTS.QUEST_ACCEPT, data.settlement.id, q.id);
+                if (q.type === 'deliver') this.updateQuestTracker(q.label);
+                dismiss();
+            });
+
+            rowY += ROW_H;
+        }
+
+        // Close button
+        const closeBtnY = cy + panelH / 2 - PAD - 10;
+        const closeBg = this.add.rectangle(cx, closeBtnY, 80, 24, 0x2a1a10, 0.8)
+            .setOrigin(0.5).setDepth(depth).setInteractive({ useHandCursor: true });
+        const closeLbl = this.add.text(cx, closeBtnY, 'Not now', {
+            fontSize: '10px', color: '#907060', fontFamily: FONT_DISPLAY,
+        }).setOrigin(0.5).setDepth(depth);
+        allItems.push(closeBg, closeLbl);
+        closeBg.on('pointerdown', dismiss);
+
+        allItems.forEach(o => (o as Phaser.GameObjects.Components.Alpha).setAlpha(0));
+        this.tweens.add({ targets: allItems, alpha: 1, duration: 300 });
+
+        // Empty sentinel container used only as a handle for the "kill existing prompt" guard
+        const tweenHandle = this.add.container(0, 0).setDepth(depth);
+        this.questPrompt = tweenHandle;
     }
+}
 }

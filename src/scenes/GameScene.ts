@@ -76,7 +76,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.settlementSystem = new SettlementSystem(this, terrain, this.saveSystem, {
             onEnter:          (s)    => this.scene.get('UIScene').events.emit(SETTLEMENT_EVENTS.ENTER, s),
-            onQuestAvailable: (s, q) => this.scene.get('UIScene').events.emit(SETTLEMENT_EVENTS.QUEST_AVAILABLE, { settlement: s, quest: q }),
+            onQuestAvailable: (s, quests) => this.scene.get('UIScene').events.emit(SETTLEMENT_EVENTS.QUEST_AVAILABLE, { settlement: s, quests }),
             onQuestComplete:  (q)    => this.scene.get('UIScene').events.emit(SETTLEMENT_EVENTS.QUEST_COMPLETE, q),
             onTreats:         (n)    => this.shepherd.addTreats(n),
             onPoemTrigger:    ()     => this.poetrySystem.triggerPoem(),

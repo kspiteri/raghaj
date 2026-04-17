@@ -56,7 +56,7 @@ export type SettlementMarker = {
 
 interface SettlementCallbacks {
     onEnter:          (s: PlacedSettlement) => void;
-    onQuestAvailable: (s: PlacedSettlement, q: QuestDef) => void;
+    onQuestAvailable: (s: PlacedSettlement, quests: QuestDef[]) => void;
     onQuestComplete:  (q: QuestDef) => void;
     onTreats:         (n: number) => void;
     onPoemTrigger:    () => void;
@@ -119,7 +119,10 @@ export default class SettlementSystem {
                 placed.push({ ...def, wx: pos.x, wy: pos.y, icon: null! });
             } else {
                 const saved = savedPositions.find(p => p.id === def.id);
-                if (saved) {
+                const tooClose = saved && placed.some(
+                    p => Math.hypot(saved.wx - p.wx, saved.wy - p.wy) < SETTLEMENT_MIN_DIST,
+                );
+                if (saved && !tooClose) {
                     placed.push({ ...def, wx: saved.wx, wy: saved.wy, icon: null! });
                 } else {
                     const pos = this.generateRandomPosition(terrain, placed);
@@ -393,8 +396,8 @@ export default class SettlementSystem {
         }
 
         const done      = this.save.getQuestsDone();
-        const available = s.quests.find(q => !done.includes(q.id));
-        if (available) {
+        const available = s.quests.filter(q => !done.includes(q.id));
+        if (available.length > 0) {
             this.callbacks.onQuestAvailable(s, available);
         }
     }
